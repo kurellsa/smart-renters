@@ -10,7 +10,7 @@ app = FastAPI()
 async def reconcile_endpoint(
     pdf1: UploadFile = File(...),
     pdf2: UploadFile = File(...),
-    sheet_json: dict = None
+    sheet_json: UploadFile = File(...)
 ):
     text1 = pdf_to_text(await pdf1.read())
     text2 = pdf_to_text(await pdf2.read())
