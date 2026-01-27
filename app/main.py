@@ -1,8 +1,8 @@
 from fastapi import FastAPI, UploadFile, File
-from extract import pdf_to_text
-from llm import extract_with_llm
-from reconcile import reconcile
-from schemas import ExtractedDoc
+from app.extract import pdf_to_text
+from app.llm import extract_with_llm
+from app.reconcile import reconcile
+from app.schemas import ExtractedDoc
 
 app = FastAPI()
 
