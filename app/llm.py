@@ -40,14 +40,18 @@ Text:
     result = response.json()
     
     def extract_with_llm(text):
-    result = llm_model_call(text)  # your HF call
-    if not result or len(result) == 0:
-        raise ValueError("LLM returned empty result")
-    
-    # Depending on HF response format
-    if "generated_text" in result[0]:
-        return eval(result[0]["generated_text"])
-    else:
-        raise ValueError(f"Unexpected LLM output format: {result}")
+    result = llm_model_call(text)
+    print("LLM raw result:", result)
 
-    return json.loads(result[0]["generated_text"])
+    if not result or len(result) == 0:
+        return {}  # or raise an error
+
+    # Assume HF returns dict with "generated_text"
+    gen_text = result[0].get("generated_text")
+    if not gen_text:
+        return {}
+    
+    try:
+        return json.loads(gen_text)
+    except json.JSONDecodeError:
+        return {}  # fallback
