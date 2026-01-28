@@ -1,5 +1,6 @@
 import requests
 import os
+import json
 
 HF_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
 HEADERS = {
@@ -48,5 +49,5 @@ Text:
         return eval(result[0]["generated_text"])
     else:
         raise ValueError(f"Unexpected LLM output format: {result}")
-        
-    return eval(result[0]["generated_text"])
+
+    return json.loads(result[0]["generated_text"])
