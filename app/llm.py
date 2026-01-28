@@ -3,7 +3,8 @@ import os
 import json
 import re
 
-HF_API = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+HF_API = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+
 HEADERS = {
     "Authorization": f"Bearer {os.environ.get('HF_TOKEN')}",
     "Content-Type": "application/json"
