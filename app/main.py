@@ -41,6 +41,6 @@ async def reconcile_endpoint(
 
     doc2 = ExtractedDoc(**parsed2)
 
-    # result = reconcile(doc1, doc2, sheet_json)
+    result = reconcile(doc1, doc2, sheet_json)
 
     return {"doc1: ": doc1}
