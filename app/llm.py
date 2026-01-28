@@ -1,42 +1,43 @@
-import requests
-import os
-import json
-import re
+import requests, os, json
 
-HF_API = "https://router.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
+HF_API = "https://router.huggingface.co/v1/chat/completions"
 
 HEADERS = {
-    "Authorization": f"Bearer {os.environ.get('HF_TOKEN')}",
+    "Authorization": f"Bearer {os.environ['HF_TOKEN']}",
     "Content-Type": "application/json"
 }
 
 def extract_with_llm(text: str) -> dict:
     prompt = f"""
-You are a data extraction engine.
-
 Return ONLY valid JSON.
-Do NOT add explanations.
-If a value is missing, return null.
+No explanation. No markdown.
 
 Schema:
 {{
-  "property_id": "string",
-  "statement_date": "YYYY-MM-DD",
-  "period": "string",
+  "property_id": string,
+  "statement_date": string,
+  "period": string,
   "rent": number | null,
   "fees": number | null
 }}
 
 Text:
-<<<
 {text}
->>>
 """
+
+    payload = {
+        "model": "mistralai/Mistral-7B-Instruct-v0.2",
+        "messages": [
+            {"role": "user", "content": prompt}
+        ],
+        "temperature": 0,
+        "max_tokens": 512
+    }
 
     response = requests.post(
         HF_API,
         headers=HEADERS,
-        json={"inputs": prompt},
+        json=payload,
         timeout=60
     )
 
@@ -44,19 +45,12 @@ Text:
         print("HF error:", response.text)
         return {}
 
-    result = response.json()
-
-    if not isinstance(result, list) or not result:
-        return {}
-
-    gen_text = result[0].get("generated_text", "")
-
-    match = re.search(r"\{.*\}", gen_text, re.DOTALL)
-    if not match:
-        return {}
+    data = response.json()
+    print("HF raw response:", data)
 
     try:
-        return json.loads(match.group())
-    except json.JSONDecodeError:
-        print("Invalid JSON:", gen_text)
+        content = data["choices"][0]["message"]["content"]
+        return json.loads(content)
+    except Exception as e:
+        print("Parse error:", e)
         return {}
