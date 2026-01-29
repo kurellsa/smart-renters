@@ -4,7 +4,6 @@ python-multipart
 pydantic
 PyMuPDF
 requests
-huggingface_hub
+huggingface_hub[oauth]
 psycopg2-binary
 sqlalchemy
-huggingface_hub
