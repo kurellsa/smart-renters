@@ -11,8 +11,8 @@ def extract_with_llm(text: str):
             "role": "system",
             "content": (
                 "You are a data extraction tool. Extract property management data into JSON. "
-                "Format: {'properties': [{'name': str, 'rent': float, 'fee': float}], 'net_total': float}. "
-                "Return ONLY the raw JSON object. No conversational text."
+                "Format: {'properties': [{'address': str, 'rent': float, 'fee': float}], 'net_income': float}. "
+                "Do not perform any calculations. Return ONLY the raw JSON object. No conversational text."
             )
         },
         {
