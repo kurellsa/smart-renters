@@ -22,9 +22,6 @@ app = FastAPI()
 # Create tables in Neon on startup
 models.Base.metadata.create_all(bind=engine)
 
-# Attach OAuth
-attach_huggingface_oauth(app)
-
 def get_current_user(request: Request):
     user = parse_huggingface_oauth(request)
     if not user:
@@ -102,6 +99,8 @@ async def reconcile_endpoint(
             "properties_saved": len(doc1.properties) + len(doc2.properties)
         }
     }
+
+attach_huggingface_oauth(app)
 
 @app.get("/", response_class=HTMLResponse)
 async def upload_page(request: Request):
