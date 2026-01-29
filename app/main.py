@@ -104,34 +104,46 @@ async def reconcile_endpoint(
     }
 
 @app.get("/", response_class=HTMLResponse)
-async def upload_page():
+async def upload_page(request: Request):
+    # This checks if the user is logged in before even showing the page
+    user = parse_huggingface_oauth(request)
+    if not user:
+        return f'<a href="/login/huggingface">Click here to Login with Hugging Face to access SmartPartners</a>'
+
     return """
     <!DOCTYPE html>
     <html>
     <head>
         <title>SmartPartners Recon</title>
         <style>
-            body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
-            .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px #eee; }
-            input { display: block; margin: 15px 0; }
-            button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
-            button:hover { background: #0056b3; }
+            body { font-family: -apple-system, sans-serif; max-width: 800px; margin: 40px auto; background: #f4f7f6; }
+            .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+            h2 { color: #2c3e50; margin-top: 0; }
+            .file-group { margin-bottom: 20px; border-bottom: 1px solid #eee; padding-bottom: 10px; }
+            button { background: #0084ff; color: white; border: none; padding: 12px 24px; border-radius: 6px; font-weight: bold; cursor: pointer; width: 100%; }
+            .history-link { display: block; text-align: center; margin-top: 20px; color: #666; text-decoration: none; }
         </style>
     </head>
     <body>
         <div class="card">
-            <h2>🚀 SmartPartners Reconciliation</h2>
+            <h2>🏠 SmartRental Recon</h2>
+            <p>Logged in as: <strong>""" + user.user_info.preferred_username + """</strong></p>
             <form action="/reconcile" method="post" enctype="multipart/form-data">
-                <label>Rental PDF 1:</label>
-                <input type="file" name="pdf1" required>
-                <label>Rental PDF 2:</label>
-                <input type="file" name="pdf2" required>
-                <label>Baselane JSON (Sheet):</label>
-                <input type="file" name="sheet_json" required>
-                <button type="submit">Run Reconciliation</button>
+                <div class="file-group">
+                    <label><strong>Step 1:</strong> Current Month PDF</label>
+                    <input type="file" name="pdf1" required>
+                </div>
+                <div class="file-group">
+                    <label><strong>Step 2:</strong> Previous Month PDF (Optional)</label>
+                    <input type="file" name="pdf2" required>
+                </div>
+                <div class="file-group">
+                    <label><strong>Step 3:</strong> Baselane Bank Export (JSON)</label>
+                    <input type="file" name="sheet_json" required>
+                </div>
+                <button type="submit">Start Reconciliation</button>
             </form>
-            <br>
-            <a href="/history">View Neon DB History</a>
+            <a href="/history" class="history-link">📜 View Audit Log (Neon DB)</a>
         </div>
     </body>
     </html>
