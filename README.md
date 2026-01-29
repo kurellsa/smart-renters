@@ -1,10 +1,12 @@
 ---
-title: Smart Fastapi
-emoji: 🏆
-colorFrom: red
-colorTo: blue
+title: SmartPartners Recon
+emoji: 🏠
+colorFrom: blue
+colorTo: green
 sdk: docker
 pinned: false
+hf_oauth: true 
 ---
 
-Check out the configuration reference at https://huggingface.co/docs/hub/spaces-config-reference
+# SmartPartners Reconciliation App
+FastAPI + Neon Postgres + LLM Extraction

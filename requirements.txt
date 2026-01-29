@@ -7,3 +7,5 @@ requests
 huggingface_hub[oauth]
 psycopg2-binary
 sqlalchemy
+streamlit
+pandas

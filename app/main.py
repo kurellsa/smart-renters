@@ -11,6 +11,7 @@ from app.schemas import ExtractedDoc
 from app.database import SessionLocal, engine, get_db # Added get_db here
 from app import models
 from huggingface_hub import attach_huggingface_oauth, parse_huggingface_oauth
+from fastapi.responses import HTMLResponse
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -101,3 +102,37 @@ async def reconcile_endpoint(
             "properties_saved": len(doc1.properties) + len(doc2.properties)
         }
     }
+
+@app.get("/", response_class=HTMLResponse)
+async def upload_page():
+    return """
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>SmartPartners Recon</title>
+        <style>
+            body { font-family: sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; line-height: 1.6; }
+            .card { border: 1px solid #ddd; padding: 20px; border-radius: 8px; box-shadow: 2px 2px 10px #eee; }
+            input { display: block; margin: 15px 0; }
+            button { background: #007bff; color: white; border: none; padding: 10px 20px; border-radius: 5px; cursor: pointer; }
+            button:hover { background: #0056b3; }
+        </style>
+    </head>
+    <body>
+        <div class="card">
+            <h2>🚀 SmartPartners Reconciliation</h2>
+            <form action="/reconcile" method="post" enctype="multipart/form-data">
+                <label>Rental PDF 1:</label>
+                <input type="file" name="pdf1" required>
+                <label>Rental PDF 2:</label>
+                <input type="file" name="pdf2" required>
+                <label>Baselane JSON (Sheet):</label>
+                <input type="file" name="sheet_json" required>
+                <button type="submit">Run Reconciliation</button>
+            </form>
+            <br>
+            <a href="/history">View Neon DB History</a>
+        </div>
+    </body>
+    </html>
+    """
