@@ -7,3 +7,4 @@ requests
 huggingface_hub
 psycopg2-binary
 sqlalchemy
+huggingface_hub
