@@ -2,33 +2,27 @@ import os
 import json
 from huggingface_hub import InferenceClient
 
-# Initialize client (uses HF_TOKEN from your Space's Secrets)
 client = InferenceClient(api_key=os.getenv("HF_TOKEN"))
 
 def extract_with_llm(text: str):
-    messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a specialized data extractor. Extract property details into JSON. "
-                "Format: {'properties': [{'name': str, 'rent': float, 'fee': float}], 'net_total': float}. "
-                "Return ONLY the raw JSON object. No markdown, no preamble."
-            )
-        },
-        {
-            "role": "user",
-            "content": f"Extract data from this text:\n\n{text}"
-        }
-    ]
+    # Manually format the prompt for Mistral Instruct
+    prompt = f"<s>[INST] You are a data extractor. Extract property data from the text below into a JSON object.\n" \
+             f"Format: {{'properties': [{{'name': str, 'rent': float, 'fee': float}}], 'net_total': float}}\n" \
+             f"Text: {text} [/INST]"
 
-    # Using chat_completion to avoid the ValueError
-    response = client.chat.completions.create(
+    # Use text_generation instead of chat.completions
+    response = client.text_generation(
         model="mistralai/Mistral-7B-Instruct-v0.3",
-        messages=messages,
-        max_tokens=1000,
-        response_format={"type": "json_object"} # Forces JSON mode
+        prompt=prompt,
+        max_new_tokens=1000,
+        stop_sequences=["[/INST]", "</s>"]
     )
 
-    # Parse the response
-    content = response.choices[0].message.content
-    return json.loads(content)
+    # Clean the string (remove any accidental markdown formatting)
+    clean_json = response.strip()
+    if "```json" in clean_json:
+        clean_json = clean_json.split("```json")[1].split("```")[0]
+    elif "```" in clean_json:
+        clean_json = clean_json.split("```")[1].split("```")[0]
+
+    return json.loads(clean_json)
