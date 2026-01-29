@@ -1,14 +1,17 @@
-from fastapi import FastAPI, UploadFile, File
+from fastapi import FastAPI, UploadFile, File, HTTPException
+import logging
+import json
+import pprint
 from app.extract import pdf_to_text
 from app.llm import extract_with_llm
 from app.reconcile import reconcile
 from app.schemas import ExtractedDoc
 
-app = FastAPI()
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
-@app.get("/")
-def health():
-    return {"status": "ok"}
+app = FastAPI()
 
 @app.post("/reconcile")
 async def reconcile_endpoint(
@@ -16,31 +19,67 @@ async def reconcile_endpoint(
     pdf2: UploadFile = File(...),
     sheet_json: UploadFile = File(...)
 ):
-    print("FILES:", pdf1.filename, pdf2.filename, sheet_json.filename)
-
-    text1 = pdf_to_text(await pdf1.read())
-    print("PDF1 text length:", len(text1))
+    # --- STEP 1: LOG RAW FILE DATA ---
+    logger.info("="*50)
+    logger.info(f"STARTING RECONCILIATION: {pdf1.filename}, {pdf2.filename}")
     
-    text2 = pdf_to_text(await pdf2.read())
-    print("PDF2 text length:", len(text2))
+    # Read files
+    content1 = await pdf1.read()
+    content2 = await pdf2.read()
+    sheet_content = await sheet_json.read()
 
-    parsed = extract_with_llm(text1)
-    print("LLM output:", parsed)
+    # Convert PDF to text
+    text1 = pdf_to_text(content1)
+    text2 = pdf_to_text(content2)
+    
+    logger.info(f"PDF1 Extracted Text Length: {len(text1)} chars")
+    logger.info(f"PDF2 Extracted Text Length: {len(text2)} chars")
 
-    if not parsed:
-        return {"error": "LLM returned empty JSON"}
+    # --- STEP 2: DEBUG LLM PARSING (PDF 1) ---
+    logger.info("--- Parsing PDF1 with LLM ---")
+    parsed1 = extract_with_llm(text1)
+    
+    # Pretty-print the raw JSON returned by LLM to your logs
+    logger.info(f"RAW LLM JSON (PDF1):\n{json.dumps(parsed1, indent=2)}")
 
-    doc1 = ExtractedDoc(**parsed)
+    try:
+        doc1 = ExtractedDoc(**parsed1)
+    except Exception as e:
+        logger.error(f"Pydantic Validation Error for PDF1: {e}")
+        return {"error": "PDF1 data structure invalid", "raw_llm_output": parsed1}
 
-
+    # --- STEP 3: DEBUG LLM PARSING (PDF 2) ---
+    logger.info("--- Parsing PDF2 with LLM ---")
     parsed2 = extract_with_llm(text2)
-    print("LLM output:", parsed2)
+    logger.info(f"RAW LLM JSON (PDF2):\n{json.dumps(parsed2, indent=2)}")
 
-    if not parsed2:
-        return {"error": "LLM returned empty JSON"}
+    try:
+        doc2 = ExtractedDoc(**parsed2)
+    except Exception as e:
+        logger.error(f"Pydantic Validation Error for PDF2: {e}")
+        return {"error": "PDF2 data structure invalid", "raw_llm_output": parsed2}
 
-    doc2 = ExtractedDoc(**parsed2)
+    # --- STEP 4: DEBUG SHEET JSON ---
+    try:
+        bank_data = json.loads(sheet_content)
+        logger.info(f"Bank JSON Loaded (First 2 entries): {json.dumps(bank_data[:2], indent=2)}")
+    except Exception as e:
+        logger.error(f"Failed to parse sheet_json: {e}")
+        return {"error": "sheet_json is not valid JSON"}
 
-    result = reconcile(doc1, doc2, sheet_json)
+    # --- STEP 5: RECONCILE ---
+    logger.info("--- Starting Final Reconciliation Logic ---")
+    result = reconcile(doc1, doc2, bank_data)
+    
+    logger.info(f"Final Result: {result}")
+    logger.info("="*50)
 
-    return {"doc1: ": doc1}
+    # Return everything so you can see it in your browser/curl
+    return {
+        "reconciliation_result": result,
+        "debug": {
+            "doc1_parsed": doc1.dict(),
+            "doc2_parsed": doc2.dict(),
+            "bank_data_count": len(bank_data)
+        }
+    }

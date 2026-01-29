@@ -4,3 +4,4 @@ python-multipart
 pydantic
 PyMuPDF
 requests
+huggingface_hub
