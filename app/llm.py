@@ -26,7 +26,7 @@ Text:
 """
 
     payload = {
-        "model": "mistralai/Mistral-7B-Instruct-v0.2",
+        "model": "HuggingFaceH4/zephyr-7b-alpha",
         "messages": [
             {"role": "user", "content": prompt}
         ],
