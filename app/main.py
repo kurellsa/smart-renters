@@ -31,7 +31,7 @@ def get_current_user(request: Request):
         raise HTTPException(status_code=401, detail="Not logged into Hugging Face")
     return user
 
-@app.get("/")
+@app.get("/health")
 def health(logs: str = None):
     return {"status": "ok", "message": "Container is healthy"}
 
