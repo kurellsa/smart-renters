@@ -108,7 +108,7 @@ async def upload_page(request: Request):
     # This checks if the user is logged in before even showing the page
     user = parse_huggingface_oauth(request)
     if not user:
-        return f'<a href="/login/huggingface">Click here to Login with Hugging Face to access SmartPartners</a>'
+        return '<a href="/oauth/huggingface/login">Click here to Login with Hugging Face to access SmartPartners</a>'
 
     return """
     <!DOCTYPE html>
