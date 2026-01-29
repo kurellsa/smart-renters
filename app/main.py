@@ -13,6 +13,10 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+@app.get("/")
+def health(logs: str = None): # Accept the 'logs' parameter HF sends
+    return {"status": "ok", "message": "Container is healthy"}
+
 @app.post("/reconcile")
 async def reconcile_endpoint(
     pdf1: UploadFile = File(...),
