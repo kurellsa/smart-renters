@@ -1,28 +1,34 @@
-import json
 import os
+import json
 from huggingface_hub import InferenceClient
 
-# This client uses Hugging Face's free serverless infrastructure
-# Ensure you have a 'Read' or 'Write' token in your HF Secrets
-client = InferenceClient(
-    model="mistralai/Mistral-7B-Instruct-v0.3", 
-    token=os.getenv("HF_TOKEN")
-)
+# Initialize client (uses HF_TOKEN from your Space's Secrets)
+client = InferenceClient(api_key=os.getenv("HF_TOKEN"))
 
 def extract_with_llm(text: str):
-    prompt = f"<s>[INST] Extract property data from this text into a JSON object. " \
-             f"Structure: {{'properties': [{{'name': '', 'rent': 0.0, 'fee': 0.0}}], 'net_total': 0.0}}. " \
-             f"Text: {text} [/INST]"
+    messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a specialized data extractor. Extract property details into JSON. "
+                "Format: {'properties': [{'name': str, 'rent': float, 'fee': float}], 'net_total': float}. "
+                "Return ONLY the raw JSON object. No markdown, no preamble."
+            )
+        },
+        {
+            "role": "user",
+            "content": f"Extract data from this text:\n\n{text}"
+        }
+    ]
 
-    response = client.text_generation(
-        prompt,
-        max_new_tokens=500,
-        return_full_text=False
+    # Using chat_completion to avoid the ValueError
+    response = client.chat.completions.create(
+        model="mistralai/Mistral-7B-Instruct-v0.3",
+        messages=messages,
+        max_tokens=1000,
+        response_format={"type": "json_object"} # Forces JSON mode
     )
-    
-    # Simple cleanup in case the model adds extra text
-    raw_content = response.strip()
-    if "```json" in raw_content:
-        raw_content = raw_content.split("```json")[1].split("```")[0]
-    
-    return json.loads(raw_content)
+
+    # Parse the response
+    content = response.choices[0].message.content
+    return json.loads(content)
