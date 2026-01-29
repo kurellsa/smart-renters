@@ -6,6 +6,11 @@ from app.extract import pdf_to_text
 from app.llm import extract_with_llm
 from app.reconcile import reconcile
 from app.schemas import ExtractedDoc
+from sqlalchemy.orm import Session
+from app.database import SessionLocal, engine
+from app import models
+from huggingface_hub import attach_huggingface_oauth, parse_huggingface_oauth
+from fastapi import Request, Depends
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -13,16 +18,36 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
+# Create the tables in Neon if they don't exist
+models.Base.metadata.create_all(bind=engine)
+
+# 1. Attach the OAuth logic to your app
+attach_huggingface_oauth(app)
+
+# 2. Create a "User Check" dependency
+def get_current_user(request: Request):
+    user = parse_huggingface_oauth(request)
+    if not user:
+        raise HTTPException(status_code=401, detail="Not logged into Hugging Face")
+    return user
+
 @app.get("/")
 def health(logs: str = None): # Accept the 'logs' parameter HF sends
     return {"status": "ok", "message": "Container is healthy"}
+
+@app.get("/history")
+def get_history(db: Session = Depends(get_db)):
+    statements = db.query(models.RentalStatement).order_by(models.RentalStatement.created_at.desc()).limit(10).all()
+    return statements
 
 @app.post("/reconcile")
 async def reconcile_endpoint(
     pdf1: UploadFile = File(...),
     pdf2: UploadFile = File(...),
     sheet_json: UploadFile = File(...)
+    user=Depends(get_current_user) # Only logged-in users get past here
 ):
+    logger.info(f"User {user.user_info.preferred_username} is running reconciliation")
     # --- STEP 1: LOG RAW FILE DATA ---
     logger.info("="*50)
     logger.info(f"STARTING RECONCILIATION: {pdf1.filename}, {pdf2.filename}")
@@ -71,7 +96,29 @@ async def reconcile_endpoint(
         logger.error(f"Failed to parse sheet_json: {e}")
         return {"error": "sheet_json is not valid JSON"}
 
-    # --- STEP 5: RECONCILE ---
+    # --- STEP 5: Save to Neon Database ---
+    # --- STEP 5: Save to Neon Database ---
+    db = SessionLocal()
+    try:
+        # Loop through properties if you want to save all of them
+        for prop in doc1.properties:
+            new_record = models.RentalStatement(
+                property_name=prop.address,
+                rent_amount=prop.rent,
+                fees=prop.fees,
+                net_income=doc1.net_income,
+                raw_json=parsed1
+            )
+            db.add(new_record)
+        db.commit()
+        logger.info("Successfully saved PDF1 data to Neon.")
+    except Exception as e:
+        logger.error(f"Database Save Error: {e}")
+        db.rollback()
+    finally:
+        db.close()
+
+    # --- STEP 6: RECONCILE ---
     logger.info("--- Starting Final Reconciliation Logic ---")
     result = reconcile(doc1, doc2, bank_data)
     

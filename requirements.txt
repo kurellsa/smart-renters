@@ -5,3 +5,5 @@ pydantic
 PyMuPDF
 requests
 huggingface_hub
+psycopg2-binary
+sqlalchemy
