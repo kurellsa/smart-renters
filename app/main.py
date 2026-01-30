@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 # Absolute imports for your app structure
 from app.extract import pdf_to_text
 from app.llm import extract_with_llm
-from app.reconcile import reconcile
+from app.reconcile import run_bank_recon
 from app.schemas import ExtractedDoc
 from app.database import SessionLocal, engine, get_db # Added get_db here
 from app import models
@@ -224,7 +224,7 @@ async def reconcile_endpoint(
         db.close()
 
     # --- STEP 6: RECONCILE ---
-    result = reconcile(gogo_sum, sure_sum, bank_data)
+    result = run_bank_recon(gogo_sum, sure_sum, bank_data)
 
     # --- STEP 7: Create Email summary ---
     # Create the email summary using the results from reconcile()
