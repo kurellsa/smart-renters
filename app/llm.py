@@ -2,6 +2,7 @@ import os
 import json
 from huggingface_hub import InferenceClient
 import logging
+import re
 
 # Initialize client using the HF_TOKEN from your Space's Secrets
 client = InferenceClient(api_key=os.getenv("HF_TOKEN"))
