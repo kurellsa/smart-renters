@@ -20,9 +20,10 @@ def extract_with_llm(text: str):
         Do not include any preamble, notes, or markdown formatting blocks.
 
         ### MAPPING RULES:
-        - 'address': Normalize (e.g., '2560 Coventry St').
+        - 'address': For addresses like 'PANDIAN:COVENTRY2560...', use '2560 Coventry St'.
         - PDF1: 'Rent Income' -> rent_paid, 'Net income' -> net_income.
         - PDF2: 'Income' -> rent_amount, 'Equity' -> rent_paid & net_income (use absolute value).
+        - PDF2: For addresses like 'PANDIAN:COVENTRY2560...', use property name as '2560 Coventry St'.
 
         ### MERCHANT RULES:
         - 'Millison' or 'Wards Creek' -> 'GOGO PROPERTY'
@@ -42,6 +43,8 @@ def extract_with_llm(text: str):
                 }}
             ]
         }}
+    ### TEXT TO EXTRACT:
+    {text}
     """
 
     messages = [
