@@ -6,23 +6,54 @@ from huggingface_hub import InferenceClient
 client = InferenceClient(api_key=os.getenv("HF_TOKEN"))
 
 def extract_with_llm(text: str):
+    # Detailed mapping instructions to handle the different PDF naming conventions
+    system_prompt = (
+        "You are a Senior Real Estate Accountant. Your goal is to extract property data "
+        "and normalize it into a standard JSON format, regardless of the source PDF's layout."
+    )
+    
+    user_prompt = f"""
+        Extract data from the following property statement text.
+
+        ### MAPPING RULES:
+        1. 'address': Normalize the property address .
+        6. For addresses like 'PANDIAN:COVENTRY2560...', use property name as '2560 Coventry St'.
+
+        ### SPECIAL LAYOUT INSTRUCTIONS:
+        - The text may contain multiple properties listed side-by-side in columns, usually on Page 3 for PDF1
+        - Ensure each property address is matched ONLY with the values directly below it for PDF1
+        - PDF1 Synonyms: 'Rent Income' -> rent_paid, 'Management Fees' -> fees, 'Statement date' --> statement_date
+        - PDF1 Synonyms: 'Net income' -> net_income, use the 'Net income' on page 3 for each property
+        - PDF2 Synonyms: 'Run Date' --> statement_date, 'Income' -> rent_amount, 'Management Fees' -> fees.
+        - PDF2 Synonyms: 'Equity' -> rent_paid, use its absolute value for rent_paid and net_income.
+        Merchant Tagging: 
+        - If the text mentions 'Millison' or 'Wards Creek', set merchant_group to 'GOGO PROPERTY'.
+        - If the text mentions 'PANDIAN' or 'Coventry', set merchant_group to 'SURE REALTY'.
+
+        ### OUTPUT SCHEMA:
+        {{
+            "statement_date": "MM/DD/YYYY",
+            "merchant_group": "string",
+            "properties": [
+                {{
+                    "address": "string",
+                    "rent_amount": 0.0,
+                    "rent_paid": 0.0,
+                    "management_fees": 0.0,
+                    "net_income": 0.0
+                }}
+            ]
+        }}
+
+    ### TEXT TO EXTRACT:
+    {text}
+
+    Return ONLY raw JSON.
+    """
+
     messages = [
-        {
-            "role": "system",
-            "content": (
-                "You are a data extraction tool. Extract property data into JSON. "
-                "Structure: {"
-                "'statement_date': 'MM/DD/YYYY', "
-                "'properties': [{'address': str, 'rent': float, 'fee': float}], "
-                "'net_income': float"
-                "} "
-                "Return ONLY raw JSON."
-            )
-        },
-        {
-            "role": "user",
-            "content": f"Extract data from this text:\n\n{text}"
-        }
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": user_prompt}
     ]
 
     # Llama-3.2-3B is highly optimized for this "chat" style request
