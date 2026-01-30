@@ -4,7 +4,7 @@ import pandas as pd
 import json
 import os
 
-st.set_page_config(page_title="SmartPartners Rental Recon", layout="wide")
+st.set_page_config(page_title="Smart Partners Rental Recon", layout="wide")
 
 st.title("🏠 SmartPartners Reconciliation Dashboard")
 

@@ -6,7 +6,7 @@ from typing import List
 
 class PropertyDetail(BaseModel):
     address: str
-    rent_amount: float  # Changed from 'rent' to match LLM
+    rent_amount: float
     rent_paid: float
     management_fees: float
     net_income: float
@@ -16,13 +16,16 @@ class ExtractedDoc(BaseModel):
     merchant_group: str
     properties: List[PropertyDetail] 
 
-class ReconciliationLog(Base):
-    __tablename__ = "reconciliation_logs"
+class RentalStatement(Base):
+    __tablename__ = "rental_statements"
 
     id = Column(Integer, primary_key=True, index=True)
-    property_name = Column(String)
-    pdf_rent = Column(Float)
-    bank_rent = Column(Float)
-    difference = Column(Float)
-    status = Column(String)
+    statement_date = Column(String)  # From LLM
+    merchant_group = Column(String)  # GOGO or SURE
+    address = Column(String)
+    rent_amount = Column(Float)
+    rent_paid = Column(Float)
+    management_fees = Column(Float)
+    net_income = Column(Float)
+    source_file = Column(String)
     timestamp = Column(DateTime, default=datetime.utcnow)

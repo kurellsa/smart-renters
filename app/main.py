@@ -221,16 +221,16 @@ async def reconcile_endpoint(
                 else:
                     sure_sum += income_val
 
+
                 new_record = models.RentalStatement(
                     statement_date=doc.statement_date, 
+                    merchant_group=doc.merchant_group,
                     address=prop.address,
-                    rent_amount=getattr(prop, 'rent_amount', 0),
-                    rent_paid=getattr(prop, 'rent_paid', 0),
-                    management_fees=getattr(prop, 'management_fees', 0),
-                    net_income=income_val, 
-                    merchant_group=merchant,
-                    source_file=filename,
-                    raw_json=prop.dict()
+                    rent_amount=prop.rent_amount,
+                    rent_paid=prop.rent_paid,
+                    management_fees=prop.management_fees,
+                    net_income=income_val,
+                    source_file=filename
                 )
                 db.add(new_record)
 
