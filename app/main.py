@@ -243,7 +243,8 @@ async def reconcile_endpoint(
         db.close()
 
     # --- STEP 6: RECONCILE ---
-    result = run_bank_recon(gogo_sum, sure_sum, bank_data)
+    all_props = doc1.properties + doc2.properties
+    result = run_bank_recon(all_props, bank_data)
 
     # --- STEP 7: Create Email summary ---
     # Create the email summary using the results from reconcile()
