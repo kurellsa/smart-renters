@@ -138,19 +138,31 @@ def send_recon_email(summary_data):
         print(f"Failed to send email: {e}")
 
 def sheet_to_json(csv_file):
-    # 1. Read the bytes from the uploaded file
+    # 1. Read the raw bytes
     content = csv_file.file.read()
-   
-    # 2. Reset the file pointer (important if you need to read it again)
-    csv_file.file.seek(0)
+    csv_file.file.seek(0) # Reset pointer
     
-    # 3. Use io.BytesIO to make the bytes look like a file to Pandas
-    df = pd.read_csv(io.BytesIO(content))
+    filename = csv_file.filename.lower()
     
-    # 4. Filter your columns
-    df = df[["Date", "Merchant", "Amount"]]
-
-    return df.to_dict(orient="records")
+    try:
+        if filename.endswith('.xlsx') or filename.endswith('.xls'):
+            # Handle Excel files
+            df = pd.read_excel(io.BytesIO(content))
+        else:
+            # Handle CSV files with a fallback for encoding
+            try:
+                df = pd.read_csv(io.BytesIO(content), encoding='utf-8')
+            except UnicodeDecodeError:
+                # Fallback for files saved in Excel CSV format (Latin-1)
+                df = pd.read_csv(io.BytesIO(content), encoding='latin1')
+        
+        # Select your required columns
+        df = df[["Date", "Merchant", "Amount"]]
+        return df.to_dict(orient="records")
+        
+    except Exception as e:
+        logger.error(f"Sheet Parsing Error: {e}")
+        raise ValueError(f"Could not parse sheet: {str(e)}")
 
 @app.post("/reconcile")
 async def reconcile_endpoint(
@@ -310,15 +322,15 @@ async def upload_page(request: Request):
             <p>Logged in as: <strong>""" + user.user_info.preferred_username + """</strong></p>
             <form action="/reconcile" method="post" enctype="multipart/form-data">
                 <div class="file-group">
-                    <label><strong>Step 1:</strong> Current Month PDF</label>
+                    <label><strong>1:</strong> Upload GOGO PDF</label>
                     <input type="file" name="pdf1" required>
                 </div>
                 <div class="file-group">
-                    <label><strong>Step 2:</strong> Previous Month PDF (Optional)</label>
+                    <label><strong>2:</strong> Upload SURE Realty PDF</label>
                     <input type="file" name="pdf2" required>
                 </div>
                 <div class="file-group">
-                    <label><strong>Step 3:</strong> Baselane Bank Export (JSON)</label>
+                    <label><strong>3:</strong> Baselane exported CSV</label>
                     <input type="file" name="sheet_json" required>
                 </div>
                 <button type="submit">Start Reconciliation</button>
