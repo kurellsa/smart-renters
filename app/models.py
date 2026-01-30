@@ -1,18 +1,21 @@
 from sqlalchemy import Column, Integer, String, Float, DateTime, JSON
 from .database import Base
 from datetime import datetime
-class RentalStatement(Base):
-    __tablename__ = "rental_statements"
+from pydantic import BaseModel, Field
+from typing import List
 
-    id = Column(Integer, primary_key=True, index=True)
-    statement_date = Column(String)    # Date reported on the PDF
-    address = Column(String, index=True)
-    rent_amount = Column(Float)          # Actual income (to match bank)
-    rent_paid = Column(Float)          # Actual income (to match bank)
-    management_fees = Column(Float)    # Expense
-    net_income = Column(Float)         # Calculated field (Paid - Fees)
-    merchant_group = Column(String)    #"GOGO PROPERTY" or "SURE REALTY"
-    created_at = Column(DateTime, default=datetime.utcnow)
+class PropertyDetail(BaseModel):
+    address: str
+    # Change 'rent' to 'rent_amount' to match the LLM output
+    rent_amount: float 
+    rent_paid: float
+    management_fees: float
+    net_income: float
+
+class ExtractedDoc(BaseModel):
+    statement_date: str
+    properties: List[PropertyDetail]    
+
 class ReconciliationLog(Base):
     __tablename__ = "reconciliation_logs"
 

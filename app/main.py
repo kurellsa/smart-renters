@@ -215,7 +215,7 @@ async def reconcile_endpoint(
                 merchant = "GOGO PROPERTY" if "pdf1" in filename.lower() else "SURE REALTY"
                 
                 # 2. Accumulate the sums dynamically
-                income_val = getattr(prop, 'net_income', 0)
+                income_val = abs(getattr(prop, 'net_income', 0))
                 if merchant == "GOGO PROPERTY":
                     gogo_sum += income_val
                 else:
@@ -227,7 +227,7 @@ async def reconcile_endpoint(
                     rent_amount=getattr(prop, 'rent_amount', 0),
                     rent_paid=getattr(prop, 'rent_paid', 0),
                     management_fees=getattr(prop, 'management_fees', 0),
-                    net_income=getattr(prop, 'net_income', 0), 
+                    net_income=income_val, 
                     merchant_group=merchant,
                     source_file=filename,
                     raw_json=prop.dict()

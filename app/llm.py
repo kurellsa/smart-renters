@@ -68,11 +68,10 @@ def extract_with_llm(text: str):
     )
 
     content = response.choices[0].message.content
-    content_clean = re.sub(r"```json|```", "", content).strip()
-
-    try:
-        return json.loads(content_clean)
-    except json.JSONDecodeError as e:
-        logger.error(f"LLM returned invalid JSON: {content}")
-        # Fallback: if it fails, return a structure that won't crash the next step
-        return {"statement_date": "Error", "properties": []}
+    match = re.search(r'\{.*\}', content, re.DOTALL)
+    if match:
+        content_clean = match.group(0)
+    else:
+        content_clean = content # Fallback
+        
+    return json.loads(content_clean)
