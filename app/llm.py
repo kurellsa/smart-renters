@@ -16,24 +16,19 @@ def extract_with_llm(text: str):
     )
     
     user_prompt = f"""
-        Extract data from the following property statement text.
+        Extract data from the following text and return ONLY a valid JSON object. 
+        Do not include any preamble, notes, or markdown formatting blocks.
 
         ### MAPPING RULES:
-        1. 'address': Normalize the property address .
-        6. For addresses like 'PANDIAN:COVENTRY2560...', use property name as '2560 Coventry St'.
+        - 'address': Normalize (e.g., '2560 Coventry St').
+        - PDF1: 'Rent Income' -> rent_paid, 'Net income' -> net_income.
+        - PDF2: 'Income' -> rent_amount, 'Equity' -> rent_paid & net_income (use absolute value).
 
-        ### SPECIAL LAYOUT INSTRUCTIONS:
-        - The text may contain multiple properties listed side-by-side in columns, usually on Page 3 for PDF1
-        - Ensure each property address is matched ONLY with the values directly below it for PDF1
-        - PDF1 Synonyms: 'Rent Income' -> rent_paid, 'Management Fees' -> fees, 'Statement date' --> statement_date
-        - PDF1 Synonyms: 'Net income' -> net_income, use the 'Net income' on page 3 for each property
-        - PDF2 Synonyms: 'Run Date' --> statement_date, 'Income' -> rent_amount, 'Management Fees' -> fees.
-        - PDF2 Synonyms: 'Equity' -> rent_paid, use its absolute value for rent_paid and net_income.
-        Merchant Tagging: 
-        - If the text mentions 'Millison' or 'Wards Creek', set merchant_group to 'GOGO PROPERTY'.
-        - If the text mentions 'PANDIAN' or 'Coventry', set merchant_group to 'SURE REALTY'.
+        ### MERCHANT RULES:
+        - 'Millison' or 'Wards Creek' -> 'GOGO PROPERTY'
+        - 'PANDIAN' or 'Coventry' -> 'SURE REALTY'
 
-        ### OUTPUT SCHEMA:
+        ### STRICT OUTPUT SCHEMA:
         {{
             "statement_date": "MM/DD/YYYY",
             "merchant_group": "string",
@@ -47,11 +42,6 @@ def extract_with_llm(text: str):
                 }}
             ]
         }}
-
-    ### TEXT TO EXTRACT:
-    {text}
-
-    Return ONLY raw JSON.
     """
 
     messages = [

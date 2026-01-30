@@ -6,15 +6,15 @@ from typing import List
 
 class PropertyDetail(BaseModel):
     address: str
-    # Change 'rent' to 'rent_amount' to match the LLM output
-    rent_amount: float 
+    rent_amount: float  # Changed from 'rent' to match LLM
     rent_paid: float
     management_fees: float
     net_income: float
 
 class ExtractedDoc(BaseModel):
     statement_date: str
-    properties: List[PropertyDetail]    
+    merchant_group: str
+    properties: List[PropertyDetail] 
 
 class ReconciliationLog(Base):
     __tablename__ = "reconciliation_logs"
