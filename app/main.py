@@ -248,15 +248,15 @@ async def reconcile_endpoint(
     # --- STEP 7: Create Email summary ---
     # Create the email summary using the results from reconcile()
     email_summary = {
-        "status": "MATCHED" if (result["GOGO_PROPERTY"]["status"] == "MATCHED" and 
-                                result["SURE_REALTY"]["status"] == "MATCHED") else "DISCREPANCY",
+        "status": "MATCHED" if (result["GOGO PROPERTY"]["status"] == "MATCHED" and 
+                                result["SURE REALTY"]["status"] == "MATCHED") else "DISCREPANCY",
         "date": doc1.statement_date,
         "gogo_total": gogo_sum,
-        "gogo_match": "✅" if result["GOGO_PROPERTY"]["status"] == "MATCHED" else "❌",
-        "gogo_diff": result["GOGO_PROPERTY"]["diff"],
+        "gogo_match": "✅" if result["GOGO PROPERTY"]["status"] == "MATCHED" else "❌",
+        "gogo_diff": result["GOGO PROPERTY"]["diff"],
         "sure_total": sure_sum,
-        "sure_match": "✅" if result["SURE_REALTY"]["status"] == "MATCHED" else "❌",
-        "sure_diff": result["SURE_REALTY"]["diff"]
+        "sure_match": "✅" if result["SURE REALTY"]["status"] == "MATCHED" else "❌",
+        "sure_diff": result["SURE REALTY"]["diff"]
     }
 
     send_recon_email(email_summary)
