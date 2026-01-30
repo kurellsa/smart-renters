@@ -183,7 +183,12 @@ async def reconcile_endpoint(
     text2 = pdf_to_text(content2)
 
     parsed1 = extract_with_llm(text1)
+    if not parsed1.get("properties"):
+        logger.error("PDF 1 failed to return property data")
+    
     parsed2 = extract_with_llm(text2)
+    if not parsed2.get("properties"):
+        logger.error("PDF 2 failed to return property data")
 
     try:
         doc1 = ExtractedDoc(**parsed1)
