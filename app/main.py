@@ -3,6 +3,7 @@ import logging
 import json
 import smtplib
 import io
+import os
 
 from sqlalchemy.orm import Session
 
@@ -11,6 +12,7 @@ from app.extract import pdf_to_text
 from app.llm import extract_with_llm
 from app.reconcile import run_bank_recon
 from app.schemas import ExtractedDoc
+from app.utils import generate_baselane_csv
 from app.database import SessionLocal, engine, get_db # Added get_db here
 from app import models
 from huggingface_hub import attach_huggingface_oauth, parse_huggingface_oauth
@@ -249,6 +251,26 @@ async def reconcile_endpoint(
             "properties_saved": len(doc1.properties) + len(doc2.properties)
         }
     }
+
+## ------- Export Baselane CSV file ---------------
+@app.get("/export-baselane")
+async def export_baselane(month_year: str, db: Session = Depends(get_db)):
+    # Pull data from Neon for PDF1 (GOGO) for that month
+    records = db.query(models.RentalStatement).filter(
+        models.RentalStatement.statement_date.contains(month_year),
+        models.RentalStatement.merchant_group == "GOGO PROPERTY"
+    ).all()
+
+    if not records:
+        return {"error": "No data found for this period"}
+
+    # Generate CSV
+    csv_file = generate_baselane_csv(records, month_year)
+    
+    # Return as a downloadable file
+    response = StreamingResponse(csv_file, media_type="text/csv")
+    response.headers["Content-Disposition"] = f"attachment; filename=baselane_upload_{month_year.replace('/', '_')}.csv"
+    return response
 
 attach_huggingface_oauth(app)
 
