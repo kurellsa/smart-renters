@@ -198,18 +198,10 @@ async def reconcile_endpoint(
         return {"error": "LLM output validation failed", "details": str(e)}
 
     # --- STEP 5: Save to Neon Database ---
-    gogo_sum = 0.0
-    sure_sum = 0.0
     try:
-        db = SessionLocal()
+        # db = SessionLocal()
         
-        # Store docs and their filenames in a list to process everything in one go
-        extractions = [
-            (doc1, pdf1.filename), 
-            (doc2, pdf2.filename)
-        ]
-
-        for doc, filename in extractions:
+        for doc, filename in [(doc1, pdf1.filename), (doc2, pdf2.filename)]:
             for prop in doc.properties:
                 # Determine the merchant group for reconciliation logic
                 merchant = "GOGO PROPERTY" if "pdf1" in filename.lower() else "SURE REALTY"
@@ -220,7 +212,6 @@ async def reconcile_endpoint(
                     gogo_sum += income_val
                 else:
                     sure_sum += income_val
-
 
                 new_record = models.RentalStatement(
                     statement_date=doc.statement_date, 
@@ -235,7 +226,7 @@ async def reconcile_endpoint(
                 db.add(new_record)
 
         db.commit()
-        logger.info(f"Successfully saved properties from {len(extractions)} files to Neon.")
+        logger.info(f"Successfully saved properties to Neon.")
     except Exception as e:
         logger.error(f"Database Save Error: {e}")
         db.rollback()
@@ -251,10 +242,10 @@ async def reconcile_endpoint(
         "status": "MATCHED" if (result["GOGO PROPERTY"]["status"] == "MATCHED" and 
                                 result["SURE REALTY"]["status"] == "MATCHED") else "DISCREPANCY",
         "date": doc1.statement_date,
-        "gogo_total": gogo_sum,
+        "gogo_total": result["GOGO PROPERTY"]["pdf_total"],
         "gogo_match": "✅" if result["GOGO PROPERTY"]["status"] == "MATCHED" else "❌",
         "gogo_diff": result["GOGO PROPERTY"]["difference"],
-        "sure_total": sure_sum,
+        "sure_total": result["SURE REALTY"]["pdf_total"],
         "sure_match": "✅" if result["SURE REALTY"]["status"] == "MATCHED" else "❌",
         "sure_diff": result["SURE REALTY"]["difference"]
     }

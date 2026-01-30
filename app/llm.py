@@ -26,6 +26,11 @@ def extract_with_llm(text: str):
         - PDF2: 'Income' -> rent_amount, 'Equity' -> rent_paid & net_income (use absolute value).
         - PDF2: For addresses like 'PANDIAN:COVENTRY2560...', use property name as '2560 Coventry St'.
 
+        ### STRICT ADDRESS-TO-MERCHANT MAPPING:
+        1. If address is '2560 Coventry St' -> merchant_group MUST be 'SURE REALTY'.
+        2. If address contains 'Millison', 'Boneset', or 'Wards Creek' -> merchant_group MUST be 'GOGO PROPERTY'.
+        3. One PDF statement only represents ONE merchant. Do not mix them.
+
         ### MERCHANT RULES:
         - 'Millison' or 'Wards Creek' -> 'GOGO PROPERTY'
         - 'PANDIAN' or 'Coventry' -> 'SURE REALTY'
