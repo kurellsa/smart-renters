@@ -13,6 +13,7 @@ def extract_with_llm(text: str):
     system_prompt = (
         "You are a Senior Real Estate Accountant. Your goal is to extract property data "
         "and normalize it into a standard JSON format, regardless of the source PDF's layout."
+        "Assign ONLY ONE merchant_group per document. If multiple are mentioned, pick the one most prominent in the header or the one associated with the majority of the addresses listed."
     )
     
     user_prompt = f"""

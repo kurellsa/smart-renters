@@ -1,15 +1,14 @@
 def run_bank_recon(doc1, doc2, bank_json):
     report = {}
     
-    # Organize documents into a list for easy iteration
-    docs = [doc1, doc2]
-
-    for doc in docs:
+    # Process both documents
+    for doc in [doc1, doc2]:
         merchant = doc.merchant_group
-        # Sum up the income from the properties inside this specific document
+        
+        # Calculate total from this document's properties
         pdf_total = sum(abs(p.net_income) for p in doc.properties)
         
-        # Look for the merchant in the bank data (case-insensitive)
+        # Find the matching deposit in the bank CSV
         bank_entry = next((item for item in bank_json 
                           if merchant.lower() in str(item.get('Merchant', '')).lower()), None)
         

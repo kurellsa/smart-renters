@@ -243,7 +243,7 @@ async def reconcile_endpoint(
         db.close()
 
     # --- STEP 6: RECONCILE ---
-    result = run_bank_recon(doc1, doc2, bank_data)
+    result = run_bank_recon(parsed1, parsed2, bank_data)
 
     # --- STEP 7: Create Email summary ---
     # Create the email summary using the results from reconcile()
