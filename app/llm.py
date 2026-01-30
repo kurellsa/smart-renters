@@ -1,6 +1,7 @@
 import os
 import json
 from huggingface_hub import InferenceClient
+import logging
 
 # Initialize client using the HF_TOKEN from your Space's Secrets
 client = InferenceClient(api_key=os.getenv("HF_TOKEN"))
@@ -65,4 +66,11 @@ def extract_with_llm(text: str):
     )
 
     content = response.choices[0].message.content
-    return json.loads(content)
+    content_clean = re.sub(r"```json|```", "", content).strip()
+
+    try:
+        return json.loads(content_clean)
+    except json.JSONDecodeError as e:
+        logger.error(f"LLM returned invalid JSON: {content}")
+        # Fallback: if it fails, return a structure that won't crash the next step
+        return {"statement_date": "Error", "properties": []}
