@@ -253,10 +253,10 @@ async def reconcile_endpoint(
         "date": doc1.statement_date,
         "gogo_total": gogo_sum,
         "gogo_match": "✅" if result["GOGO PROPERTY"]["status"] == "MATCHED" else "❌",
-        "gogo_diff": result["GOGO PROPERTY"]["diff"],
+        "gogo_diff": result["GOGO PROPERTY"]["difference"],
         "sure_total": sure_sum,
         "sure_match": "✅" if result["SURE REALTY"]["status"] == "MATCHED" else "❌",
-        "sure_diff": result["SURE REALTY"]["diff"]
+        "sure_diff": result["SURE REALTY"]["difference"]
     }
 
     send_recon_email(email_summary)
