@@ -121,7 +121,22 @@ async def reconcile_endpoint(
         prop_counts = defaultdict(int)
         stmt_dates = {} 
         source_files = {}
+
+        # Delete existing statements for this specific month/year 
+        # so we don't get duplicates or inflated totals.
+        db.query(models.RentalStatement).filter(
+            extract('year', models.RentalStatement.statement_date) == month_year_obj.year,
+            extract('month', models.RentalStatement.statement_date) == month_year_obj.month
+        ).delete(synchronize_session=False)
+
+        # Also delete existing summary records for this month
+        db.query(models.ReconciliationSummary).filter(
+            extract('year', models.ReconciliationSummary.statement_date) == month_year_obj.year,
+            extract('month', models.ReconciliationSummary.statement_date) == month_year_obj.month
+        ).delete(synchronize_session=False)
         
+        db.commit() # Commit the deletion before adding new data
+
         for doc, filename in [(doc1, pdf1.filename), (doc2, pdf2.filename)]:
             merchant_name = doc.merchant_group.strip().upper()
             stmt_dates[merchant_name] = doc.statement_date
