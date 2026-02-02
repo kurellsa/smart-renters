@@ -1,26 +1,40 @@
-def run_bank_recon(doc1, doc2, bank_json):
-    report = {}
-    
-    # Process both documents
-    for doc in [doc1, doc2]:
-        merchant = doc.merchant_group
-        
-        # Calculate total from this document's properties
-        pdf_total = sum(abs(p.net_income) for p in doc.properties)
-        
-        # Find the matching deposit in the bank CSV
-        bank_entry = next((item for item in bank_json 
-                          if merchant.lower() in str(item.get('Merchant', '')).lower()), None)
-        
-        bank_total = float(bank_entry['Amount']) if bank_entry else 0.0
-        diff = round(pdf_total - bank_total, 2)
+from sqlalchemy import func
+from sqlalchemy.orm import Session
+from app.models import ReconciliationSummary
+from app.utils import send_reconciliation_email
+from datetime import date
 
-        report[merchant] = {
-            "status": "MATCHED" if abs(diff) < 0.01 else "DISCREPANCY",
-            "pdf_total": round(pdf_total, 2),
-            "bank_total": round(bank_total, 2),
-            "difference": diff,
-            "property_count": len(doc.properties)
+def run_bank_reconciliation(db: Session, stmt_dates: dict, calc_totals: dict, prop_counts: dict, bank_data: dict, source_files: dict, target_month: date):
+    reconcile_summary = {}
+
+    for merchant, pdf_total in calc_totals.items():
+        bank_total = bank_data.get(merchant, 0.0)
+        diff = pdf_total - bank_total
+        status = "MATCHED" if abs(diff) < 0.01 else "DISCREPANCY"
+
+        # 2. Load the Table (ReconciliationLog)
+        new_log = ReconciliationSummary(
+            statement_date=stmt_dates.get(merchant, "Unknown"),
+            merchant_group=merchant,
+            statement_total=pdf_total,
+            bank_transaction=bank_total,
+            difference=diff,
+            status=status,
+            property_count=prop_counts.get(merchant, 0),
+            source_file=source_files.get(merchant, "Unknown")
+        )
+        db.add(new_log)
+        
+        reconcile_summary[merchant] = {
+            "status": status, 
+            "pdf_total": pdf_total, 
+            "bank_total": bank_total, 
+            "diff": diff
         }
-            
-    return report
+
+    db.commit() # Save logs to DB
+    
+    # 3. Trigger Email
+    send_reconciliation_email(reconcile_summary, target_month)
+    
+    return reconcile_summary

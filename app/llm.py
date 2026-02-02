@@ -1,76 +1,37 @@
 import os
 import json
-import logging
-import re
-from venv import logger
-from huggingface_hub import InferenceClient
-
-# Initialize client using the HF_TOKEN from your Space's Secrets
-client = InferenceClient(api_key=os.getenv("HF_TOKEN"))
+from groq import Groq
 
 def extract_with_llm(text: str):
-    # Detailed mapping instructions to handle the different PDF naming conventions
-    system_prompt = (
-        "You are a Senior Real Estate Accountant. Your goal is to extract property data "
-        "and normalize it into a standard JSON format, regardless of the source PDF's layout."
-        "Assign ONLY ONE merchant_group per document. If multiple are mentioned, pick the one most prominent in the header or the one associated with the majority of the addresses listed."
-    )
+    client = Groq(api_key=os.getenv("GROQ_API_KEY"))
     
-    user_prompt = f"""
-        Extract data from the following text and return ONLY a valid JSON object. 
-        Do not include any preamble, notes, or markdown formatting blocks.
+    # We use 70B because it's significantly smarter than 8B for tables
+    model_id = "llama-3.3-70b-versatile"
 
-        ### MAPPING RULES:
-        - 'address': For addresses like 'PANDIAN:COVENTRY2560...', use '2560 Coventry St'.
-        - PDF1: 'Rent Income' -> rent_paid, 'Net income' -> net_income.
-        - PDF2: 'Income' -> rent_amount, 'Equity' -> rent_paid & net_income (use absolute value).
-        - PDF2: For addresses like 'PANDIAN:COVENTRY2560...', use property name as '2560 Coventry St'.
+    prompt = f"""
+    Return ONLY a valid JSON object. Extract rental data from the following text.
+    
+    ### CRITICAL RULES:
+    - 'merchant_group': set this to 'GOGO PROPERTY' for GOGO document and 'SURE REALTY' for the other one.
+    - 'address': set this to '2560 Coventry St.' for 'Management Detail Report' document
+ 
+    SCHEMA:
+    {{
+      "statement_date": "MM/DD/YYYY",
+      "merchant_group": str,
+      "properties": [
+        {{ "address": "str", "rent_amount": 0.0, "rent_paid": 0.0, "management_fees": 0.0 }}
+      ]
+    }}
 
-        ### STRICT ADDRESS-TO-MERCHANT MAPPING:
-        1. If address is '2560 Coventry St' -> merchant_group MUST be 'SURE REALTY'.
-        2. If address contains 'Millison', 'Boneset', or 'Wards Creek' -> merchant_group MUST be 'GOGO PROPERTY'.
-        3. One PDF statement only represents ONE merchant. Do not mix them.
-
-        ### MERCHANT RULES:
-        - 'Millison' or 'Wards Creek' -> 'GOGO PROPERTY'
-        - 'PANDIAN' or 'Coventry' -> 'SURE REALTY'
-
-        ### STRICT OUTPUT SCHEMA:
-        {{
-            "statement_date": "MM/DD/YYYY",
-            "merchant_group": "string",
-            "properties": [
-                {{
-                    "address": "string",
-                    "rent_amount": 0.0,
-                    "rent_paid": 0.0,
-                    "management_fees": 0.0,
-                    "net_income": 0.0
-                }}
-            ]
-        }}
-    ### TEXT TO EXTRACT:
+    TEXT:
     {text}
     """
 
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_prompt}
-    ]
-
-    # Llama-3.2-3B is highly optimized for this "chat" style request
-    response = client.chat.completions.create(
-        model="meta-llama/Llama-3.2-3B-Instruct",
-        messages=messages,
-        max_tokens=1000,
-        response_format={"type": "json_object"} 
+    chat_completion = client.chat.completions.create(
+        messages=[{"role": "user", "content": prompt}],
+        model=model_id,
+        response_format={"type": "json_object"} # Forces JSON
     )
 
-    content = response.choices[0].message.content
-    match = re.search(r'\{.*\}', content, re.DOTALL)
-    if match:
-        content_clean = match.group(0)
-    else:
-        content_clean = content # Fallback
-        
-    return json.loads(content_clean)
+    return json.loads(chat_completion.choices[0].message.content)

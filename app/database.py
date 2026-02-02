@@ -2,9 +2,17 @@ import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
+from dotenv import load_dotenv  
+
+# Load variables from .env
+load_dotenv()
 
 # Get URL from HF Secrets
 SQLALCHEMY_DATABASE_URL = os.getenv("DATABASE_URL")
+
+# DEBUG: 
+if not SQLALCHEMY_DATABASE_URL:
+    print("❌ ERROR: DATABASE_URL is not set in .env file!")
 
 # Fix for SQLAlchemy if the URL starts with 'postgres://' (common in cloud providers)
 if SQLALCHEMY_DATABASE_URL and SQLALCHEMY_DATABASE_URL.startswith("postgres://"):

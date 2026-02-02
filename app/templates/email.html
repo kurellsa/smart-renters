@@ -1,0 +1,39 @@
+<html>
+    <body style="font-family: 'Segoe UI', Arial, sans-serif; color: #333; line-height: 1.6;">
+        <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
+            Rental Reconciliation: {{ display_month }}
+        </h2>
+        <p>The latest PDF statements have been processed against bank records for <b>{{ display_month }}</b>.</p>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+            <thead>
+                <tr style="background-color: #f8f9fa; text-align: left;">
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Merchant</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">PDF Total</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Bank Total</th>
+                    <th style="padding: 10px; border: 1px solid #dee2e6;">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for merchant, data in summary_data.items() %}
+                <tr>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{ merchant }}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">${{ "{:,.2f}".format(data.pdf_total) }}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6;">${{ "{:,.2f}".format(data.bank_total) }}</td>
+                    <td style="padding: 10px; border: 1px solid #dee2e6; color: {{ '#27ae60' if data.status == 'MATCHED' else '#e74c3c' }};">
+                        <b>{{ data.status }}</b>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <div style="margin-top: 30px; padding: 30px; background-color: #f4f7f6; border-radius: 12px; text-align: center;">
+            <p style="margin-bottom: 20px; color: #7f8c8d;">Click below to view property-level breakdowns and download Baselane CSVs:</p>
+            <a href="https://smartrenters-smart-fastapi.hf.space/report?month_year={{ link_month }}" 
+               style="background-color: #3498db; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+               Open Dashboard for {{ display_month }}
+            </a>
+        </div>
+    </body>
+</html>
