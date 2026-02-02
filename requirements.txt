@@ -28,4 +28,4 @@ sqlalchemy
 streamlit
 pandas
 openpyxl
-
+groq
