@@ -14,7 +14,7 @@ pypdf
 python-dotenv
 python-multipart
 starlette
-typing-inspection=
+typing-inspection
 typing_extensions
 fastapi
 uvicorn
