@@ -24,6 +24,7 @@ from app.database import SessionLocal, engine, get_db # Added get_db here
 from app import models
 from fastapi.responses import StreamingResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.responses import RedirectResponse
 import csv 
 
 html_templates = Jinja2Templates(directory="app/templates")
@@ -60,7 +61,7 @@ async def reconcile_endpoint(
     user=Depends(get_current_user),
     db: Session = Depends(get_db)      
 ):
-    logger.info(f"User {user.user_info.preferred_username} starting reconciliation")
+    # logger.info(f"User {user.user_info.preferred_username} starting reconciliation")
     
     try:
         month_year_obj = parse_any_date(month_year)
@@ -161,19 +162,6 @@ async def reconcile_endpoint(
                 # Determine the merchant group for reconciliation logic
 
         db.commit()
-        logger.info(f"***** Calc_totals -> {calc_totals}")
-        logger.info(f"***** Successfully saved properties to Neon.")
-
-        logger.info(f"DEBUG: stmt_dates type is {type(stmt_dates)} and content is {stmt_dates}")
-        
-        # --- STEP 6: RECONCILE ---
-        # 1. Detailed Debug Logging
-        logger.info(f"DEBUG Check Types: stmt_dates={type(stmt_dates)}, bank_data={type(bank_data)}, source_files={type(source_files)}")
-        
-        # 2. Safety check: Ensure bank_data is a dict
-        if not isinstance(bank_dict, dict):
-            logger.error(f"CRITICAL: bank_data is a {type(bank_data)}, not a dict! Converting or fixing required.")
-            bank_dict = {} # Temporary fallback to prevent crash        
 
         # --- STEP 6: RECONCILE ---
         result = run_bank_reconciliation(
@@ -191,13 +179,7 @@ async def reconcile_endpoint(
     finally:
         db.close()
 
-    return {
-        # "reconciliation_result": result,
-        "summary": {
-            "user": user.user_info.preferred_username,
-            "properties_saved": len(doc1.properties) + len(doc2.properties)
-        }
-    }
+    return RedirectResponse(url="/report?msg=success", status_code=303)
 
 # ------------------ Report ----------------
 @app.get("/report", response_class=HTMLResponse)
@@ -249,6 +231,43 @@ async def unified_dashboard(
         "sure_match": sure_match,
         "selected_month": month_year,
         "selected_merchant": merchant
+    })
+
+# ---------------- Audit Log --------------------
+@app.get("/history")
+async def audit_log(
+    request: Request, 
+    month_year: str = None, 
+    merchant: str = None, 
+    property_name: str = None, 
+    db: Session = Depends(get_db)
+):
+    query = db.query(models.RentalStatement)
+
+    # Filter by Month/Year
+    if month_year:
+        year_val, month_val = map(int, month_year.split("-"))
+        query = query.filter(
+            extract('year', models.RentalStatement.statement_date) == year_val,
+            extract('month', models.RentalStatement.statement_date) == month_val
+        )
+
+    # Filter by Merchant Group
+    if merchant:
+        query = query.filter(models.RentalStatement.merchant_group == merchant)
+
+    # Filter by Property (Partial match search)
+    if property_name:
+        query = query.filter(models.RentalStatement.address.ilike(f"%{property_name}%"))
+
+    statements = query.order_by(models.RentalStatement.statement_date.desc()).all()
+
+    return html_templates.TemplateResponse("history.html", {
+        "request": request,
+        "statements": statements,
+        "selected_month": month_year,
+        "selected_merchant": merchant,
+        "property_query": property_name
     })
 
 ## ------- Export Baselane CSV file ---------------

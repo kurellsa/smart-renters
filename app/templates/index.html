@@ -16,7 +16,7 @@
         <h2 class="text-center mb-1">🏠 Smart Rental Recon</h2>
         <p class="text-center text-muted mb-4">Logged in as: <strong>{{ username }}</strong></p>
 
-        <form action="/reconcile" method="post" enctype="multipart/form-data">
+        <form id="reconForm" action="/reconcile" method="post" enctype="multipart/form-data">
             <div class="mb-3">
                 <label class="form-label fw-bold">1. Upload GOGO PDF</label>
                 <input type="file" name="pdf1" class="form-control" required>
@@ -37,19 +37,14 @@
                 <input type="month" id="monthPicker" name="month_year" class="form-control" required>
             </div>
 
-            <button type="submit" class="btn btn-hf w-100 py-2">🚀 Start Reconciliation</button>
+            <button type="submit" id="submitBtn" class="btn btn-hf w-100 py-2">
+                <span id="btnText">🚀 Start Reconciliation</span>
+                <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
+            </button>
         </form>
     </div>
 
-    <script>
-        // This sets the picker to the current month automatically on load
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        document.getElementById('monthPicker').value = `${year}-${month}`;
-    </script>
-
-    <div class="row g-2 text-center">
+    <div class="row g-2 text-center mb-5">
         <div class="col-6">
             <a href="/report" class="btn btn-outline-dark w-100">📊 View Report</a>
         </div>
@@ -57,6 +52,25 @@
             <a href="/history" class="btn btn-outline-secondary w-100">📜 Audit Log</a>
         </div>
     </div>
+
+    <script>
+        // 1. Handle Form Submission UI (Spinner)
+        document.getElementById('reconForm').onsubmit = function() {
+            const btn = document.getElementById('submitBtn');
+            const text = document.getElementById('btnText');
+            const spinner = document.getElementById('btnSpinner');
+            
+            btn.disabled = true;
+            text.innerText = " Processing PDFs...";
+            spinner.classList.remove('d-none');
+        };
+
+        // 2. Set Default Date
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        document.getElementById('monthPicker').value = `${year}-${month}`;
+    </script>
 
 </body>
 </html>
