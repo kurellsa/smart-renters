@@ -144,7 +144,7 @@ def send_reconciliation_email(summary_data, target_month):
     msg = MIMEMultipart()
     msg['From'] = sender
     msg['To'] = receiver
-    msg['Subject'] = f"Reconciliation Report: {datetime.now().strftime('%Y-%m-%d')}"
+    msg['Subject'] = f"Reconciliation Report for {display_month}"
 
     # Build an HTML Table for the body
     rows = ""
