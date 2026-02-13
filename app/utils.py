@@ -239,7 +239,8 @@ def send_reconciliation_email(recon_logs, misc_logs, target_month):
     msg.attach(MIMEText(html_content, 'html'))    
     
     try:
-        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=20)
+        print(f"SMTP Server: {smtp_server} | Port: {smtp_port} | From: {sender} | To: {receiver}")
         server.starttls()
         server.login(sender.strip(), password.strip())
         server.send_message(msg)
