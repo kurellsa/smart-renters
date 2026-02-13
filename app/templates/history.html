@@ -18,11 +18,11 @@
                     <input type="month" name="month_year" class="form-control" value="{{ selected_month }}">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small fw-bold">Merchant</label>
-                    <select name="merchant" class="form-select">
-                        <option value="">All Merchants</option>
-                        <option value="GOGO PROPERTY" {% if selected_merchant == 'GOGO PROPERTY' %}selected{% endif %}>GOGO PROPERTY</option>
-                        <option value="SURE REALTY" {% if selected_merchant == 'SURE REALTY' %}selected{% endif %}>SURE REALTY</option>
+                    <label class="form-label small fw-bold">Property Management</label>
+                    <select name="property_management" class="form-select">
+                        <option value="">All Prop Mgmt</option>
+                        <option value="GOGO PROPERTY" {% if selected_property_management == 'GOGO PROPERTY' %}selected{% endif %}>GOGO PROPERTY</option>
+                        <option value="SURE REALTY" {% if selected_property_management == 'SURE REALTY' %}selected{% endif %}>SURE REALTY</option>
                     </select>
                 </div>
                 <div class="col-md-3">
@@ -41,7 +41,7 @@
             <thead class="table-dark">
                 <tr>
                     <th>Date</th>
-                    <th>Merchant</th>
+                    <th>Property Management</th>
                     <th>Property Address</th>
                     <th>Rent Paid</th>
                     <th>Mgmt Fees</th>
@@ -57,7 +57,7 @@
                     
                     <tr>
                         <td>{{ s.statement_date.strftime('%Y-%m-%d') }}</td>
-                        <td><span class="badge bg-secondary">{{ s.merchant_group }}</span></td>
+                        <td><span class="badge bg-secondary">{{ s.property_management }}</span></td>
                         <td>{{ s.address }}</td>
                         <td class="text-success">${{ "%.2f"|format(s.rent_paid) }}</td>
                         <td class="text-danger">-${{ "%.2f"|format(s.management_fees|abs) }}</td>

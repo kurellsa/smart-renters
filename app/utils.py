@@ -7,6 +7,7 @@ from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 import logging
 import pandas as pd
+import re
 from datetime import datetime
 from fastapi.templating import Jinja2Templates
 from dotenv import load_dotenv
@@ -43,7 +44,7 @@ def generate_baselane_csv(records):
         writer.writerow([
             rec.statement_date.strftime('%b %d %Y'),
             "Manually Added - Imported",
-            f"Rent Received - {rec.merchant_group}",
+            f"Rent Received - {rec.property_management}",
             f"{rec.rent_paid:.2f}",
             "Rents",
             rec.address
@@ -55,7 +56,7 @@ def generate_baselane_csv(records):
             writer.writerow([
                 rec.statement_date.strftime('%b %d %Y'),
                 "Manually Added - Imported",
-                f"Management Fee - {rec.merchant_group}",
+                f"Management Fee - {rec.property_management}",
                 f"-{abs(rec.management_fees):.2f}",
                 "Management Fees",
                 rec.address
@@ -84,6 +85,14 @@ def parse_any_date(date_val):
             continue
             
     raise ValueError(f"Could not parse date: {date_val}")
+
+# --  Extract House number. ------------ 
+def extract_house_number(address_str):
+    """Extracts only the leading digits from an address string."""
+    if not address_str:
+        return None
+    match = re.search(r'^\d+', str(address_str).strip())
+    return match.group() if match else None
 
 # ----------- Get text for specified pages ------------
 def get_relevant_text(text, page_indices):
@@ -121,14 +130,14 @@ def sheet_to_json(csv_file):
                 df = pd.read_csv(io.BytesIO(content), encoding='latin1')
         
         # Select your required columns
-        df = df[["Date", "Merchant", "Amount"]]
+        df = df[["Date", "Merchant", "Description", "Amount"]]
         return df.to_dict(orient="records")
         
     except Exception as e:
         raise ValueError(f"Could not parse sheet: {str(e)}")
 
 # ----------------- Email Notification ---------------------
-def send_reconciliation_email(summary_data, target_month):
+def send_reconciliation_email_old(summary_data, target_month):
 
     display_month = target_month.strftime('%B %Y')
     link_month = target_month.strftime('%Y-%m')
@@ -148,11 +157,11 @@ def send_reconciliation_email(summary_data, target_month):
 
     # Build an HTML Table for the body
     rows = ""
-    for merchant, data in summary_data.items():
+    for property_management, data in summary_data.items():
         status_color = "green" if data['status'] == "MATCHED" else "red"
         rows += f"""
         <tr>
-            <td>{merchant}</td>
+            <td>{property_management}</td>
             <td>${data['pdf_total']:.2f}</td>
             <td>${data['bank_total']:.2f}</td>
             <td style="color: {status_color};"><b>{data['status']}</b></td>
@@ -186,3 +195,57 @@ def send_reconciliation_email(summary_data, target_month):
     except Exception as e:
         print(f"❌ Email Error: {e}")
     return False
+
+## ---------------- Email -----------------------------
+def send_reconciliation_email(recon_logs, misc_logs, target_month):
+    display_month = target_month.strftime('%B %Y')
+    link_month = target_month.strftime('%Y-%m')
+
+    # 1. Aggregate Totals
+    total_actual_rent = sum(log.actual_rent for log in recon_logs)
+    total_target_rent = sum(log.target_rent for log in recon_logs)
+    
+    total_actual_hoa = sum(log.actual_hoa for log in recon_logs)
+    total_target_hoa = sum(log.target_hoa for log in recon_logs)
+    
+    total_actual_mort = sum(log.actual_mortgage for log in recon_logs)
+    total_target_mort = sum(log.target_mortgage for log in recon_logs)
+
+    # 2. Structure Component Data
+    components = [
+        {"name": "Rent Reconciliation", "actual": total_actual_rent, "target": total_target_rent, 
+         "status": "MATCHED" if total_actual_rent == total_target_rent else "DISCREPANCY"},
+        {"name": "HOA Fees Audit", "actual": total_actual_hoa, "target": total_target_hoa, 
+         "status": "MATCHED" if total_actual_hoa == total_target_hoa else "DISCREPANCY"},
+        {"name": "Mortgage Audit", "actual": total_actual_mort, "target": total_target_mort, 
+         "status": "MATCHED" if total_actual_mort == total_target_mort else "DISCREPANCY"}
+    ]
+
+    # 3. Render the Template
+    # Ensure html_templates is your Jinja2 Environment (e.g., Jinja2Templates)
+    template = html_templates.get_template("email.html")
+    html_content = template.render(
+        display_month=display_month,
+        link_month=link_month,
+        components=components,
+        misc_logs=misc_logs
+    )
+
+    # 4. Email Sending Logic
+    msg = MIMEMultipart()
+    msg['From'] = sender
+    msg['To'] = receiver
+    msg['Subject'] = f"📊 Smart LLC - Reconciliation Report: {display_month}"
+    msg.attach(MIMEText(html_content, 'html'))    
+    
+    try:
+        server = smtplib.SMTP(smtp_server, smtp_port, timeout=10)
+        server.starttls()
+        server.login(sender.strip(), password.strip())
+        server.send_message(msg)
+        server.quit()
+        print(f"✅ Email sent successfully for {display_month}!")
+        return True
+    except Exception as e:
+        print(f"❌ Email Error: {e}")
+        return False

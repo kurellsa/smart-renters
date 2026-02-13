@@ -12,13 +12,13 @@ def extract_with_llm(text: str):
     Return ONLY a valid JSON object. Extract rental data from the following text.
     
     ### CRITICAL RULES:
-    - 'property_management': set this to 'GOGO PROPERTY' for GOGO document and 'SURE REALTY' for the other one.
+    - 'merchant_group': set this to 'GOGO PROPERTY' for GOGO document and 'SURE REALTY' for the other one.
     - 'address': set this to '2560 Coventry St.' for 'Management Detail Report' document
  
     SCHEMA:
     {{
       "statement_date": "MM/DD/YYYY",
-      "property_management": str,
+      "merchant_group": str,
       "properties": [
         {{ "address": "str", "rent_amount": 0.0, "rent_paid": 0.0, "management_fees": 0.0 }}
       ]

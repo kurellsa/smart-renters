@@ -1,39 +1,78 @@
+<!DOCTYPE html>
 <html>
-    <body style="font-family: 'Segoe UI', Arial, sans-serif; color: #333; line-height: 1.6;">
-        <h2 style="color: #2c3e50; border-bottom: 2px solid #3498db; padding-bottom: 10px;">
-            Rental Reconciliation: {{ display_month }}
-        </h2>
-        <p>The latest PDF statements have been processed against bank records for <b>{{ display_month }}</b>.</p>
-        
-        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+<head>
+    <style>
+        body { font-family: Arial, sans-serif; color: #333; line-height: 1.6; }
+        .container { width: 100%; max-width: 650px; margin: 0 auto; }
+        .report-header { color: #2d3748; border-bottom: 2px solid #edf2f7; padding-bottom: 10px; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th { background-color: #f8f9fa; text-align: left; padding: 10px; border-bottom: 2px solid #dee2e6; }
+        td { padding: 10px; border-bottom: 1px solid #eee; }
+        .status-matched { color: #22c55e; font-weight: bold; }
+        .status-discrepancy { color: #ef4444; font-weight: bold; }
+        .misc-section { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
+        .btn { background-color: #007bff; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h2 class="report-header">Reconciliation Report: {{ display_month }}</h2>
+        <p>The monthly financial audit has been completed. Below is the summary of all components:</p>
+
+        <table>
             <thead>
-                <tr style="background-color: #f8f9fa; text-align: left;">
-                    <th style="padding: 10px; border: 1px solid #dee2e6;">Merchant</th>
-                    <th style="padding: 10px; border: 1px solid #dee2e6;">PDF Total</th>
-                    <th style="padding: 10px; border: 1px solid #dee2e6;">Bank Total</th>
-                    <th style="padding: 10px; border: 1px solid #dee2e6;">Status</th>
+                <tr>
+                    <th>Component</th>
+                    <th>Collected/Paid</th>
+                    <th>Expected</th>
+                    <th>Status</th>
                 </tr>
             </thead>
             <tbody>
-                {% for merchant, data in summary_data.items() %}
+                {% for comp in components %}
                 <tr>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;">{{ merchant }}</td>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;">${{ "{:,.2f}".format(data.pdf_total) }}</td>
-                    <td style="padding: 10px; border: 1px solid #dee2e6;">${{ "{:,.2f}".format(data.bank_total) }}</td>
-                    <td style="padding: 10px; border: 1px solid #dee2e6; color: {{ '#27ae60' if data.status == 'MATCHED' else '#e74c3c' }};">
-                        <b>{{ data.status }}</b>
+                    <td>{{ comp.name }}</td>
+                    <td>${{ "{:,.2f}".format(comp.actual) }}</td>
+                    <td>${{ "{:,.2f}".format(comp.target) }}</td>
+                    <td class="{{ 'status-matched' if comp.status == 'MATCHED' else 'status-discrepancy' }}">
+                        {{ comp.status }}
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <div style="margin-top: 30px; padding: 30px; background-color: #f4f7f6; border-radius: 12px; text-align: center;">
-            <p style="margin-bottom: 20px; color: #7f8c8d;">Click below to view property-level breakdowns and download Baselane CSVs:</p>
-            <a href="https://smartrenters-smart-fastapi.hf.space/report?month_year={{ link_month }}" 
-               style="background-color: #3498db; color: white; padding: 14px 30px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
-               Open Dashboard for {{ display_month }}
-            </a>
+        {% if misc_logs %}
+        <div class="misc-section">
+            <h3 style="color: #4a5568;">Miscellaneous Bank Activity</h3>
+            <table>
+                <thead>
+                    <tr style="background-color: #f8f9fa;">
+                        <th>Date</th>
+                        <th>Description</th>
+                        <th style="text-align: right;">Amount</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for item in misc_logs %}
+                    <tr>
+                        <td>{{ item.date_cleared.strftime('%m/%d/%Y') }}</td>
+                        <td>{{ item.description }}</td>
+                        <td style="text-align: right; color: {{ '#ef4444' if item.amount < 0 else '#22c55e' }};">
+                            ${{ "{:,.2f}".format(item.amount) }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-    </body>
+        {% endif %}
+
+        <p>
+            <a href="https://smartrenters-smart-fastapi.hf.space/?month_year={{ link_month }}" class="btn">
+                Reconciliation Dashboard
+            </a>
+        </p>
+    </div>
+</body>
 </html>

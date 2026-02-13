@@ -49,10 +49,10 @@
                     <input type="month" name="month_year" class="form-control" value="{{ selected_month }}">
                 </div>
                 <div class="col-md-4">
-                    <select name="merchant" class="form-select">
-                        <option value="">All Merchants</option>
-                        <option value="GOGO PROPERTY" {% if selected_merchant == 'GOGO PROPERTY' %}selected{% endif %}>GOGO PROPERTY</option>
-                        <option value="SURE REALTY" {% if selected_merchant == 'SURE REALTY' %}selected{% endif %}>SURE REALTY</option>
+                    <select name="property_management" class="form-select">
+                        <option value="">All Prop Mgmt</option>
+                        <option value="GOGO PROPERTY" {% if selected_property_management == 'GOGO PROPERTY' %}selected{% endif %}>GOGO PROPERTY</option>
+                        <option value="SURE REALTY" {% if selected_property_management == 'SURE REALTY' %}selected{% endif %}>SURE REALTY</option>
                     </select>
                 </div>
                 <div class="col-md-4">
@@ -64,7 +64,7 @@
 
     <div class="d-flex justify-content-between align-items-center mb-3">
         <h4>Detailed Transactions (Baselane Ready)</h4>
-        <a href="/export/baselane?month_year={{ selected_month }}&merchant={{ selected_merchant or '' }}" class="btn btn-success">📥 Download CSV</a>
+        <a href="/export/baselane?month_year={{ selected_month }}&property_management={{ selected_property_management or '' }}" class="btn btn-success">📥 Download CSV</a>
     </div>
 
     <div class="table-responsive bg-white rounded shadow-sm">

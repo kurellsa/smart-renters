@@ -1,76 +1,349 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <title>Smart Rental Reconciliation</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Rental Recon - Dashboard</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
-        body { background: #f4f7f6; padding-top: 50px; }
-        .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .btn-hf { background: #0084ff; color: white; font-weight: bold; }
+        :root { --sidebar-bg: #ffffff; --main-bg: #f8f9fa; --accent-blue: #0084ff; }
+        body { background-color: var(--main-bg); min-height: 100vh; overflow-x: hidden; }
+        
+        /* Sidebar Styling */
+        .sidebar {
+            width: 320px; /* Increased from 250px */
+            height: 100vh;
+            position: fixed;
+            background: #f8f9fa;
+            border-right: 1px solid #dee2e6;
+            padding: 20px;
+            z-index: 1000;
+        }
+        
+        .main-content {
+            margin-left: 320px; 
+            padding: 30px;
+            width: calc(100% - 320px);
+        }
+
+        /* Ensure form controls inside the sidebar take full width */
+        .sidebar .form-control {
+            font-size: 0.85rem; /* Slightly smaller text helps with long filenames */
+            width: 100%;
+        }
+
+        /* Layout Fixes */
+        .nav-link { color: #4b5563; font-weight: 500; border-radius: 8px; margin-bottom: 5px; }
+        .nav-link:hover, .nav-link.active { background: #eff6ff; color: var(--accent-blue); }
+        .nav-link i { width: 25px; }
+
+        /* Card & UI Tweaks */
+        .card { border-radius: 12px; border: none; box-shadow: 0 4px 12px rgba(0,0,0,0.05); }
+        .btn-hf { background: var(--accent-blue); color: white; font-weight: bold; border-radius: 8px; }
         .btn-hf:hover { background: #0073e6; color: white; }
+        .form-label { font-size: 0.85rem; margin-bottom: 0.3rem; }
+
+        /* Custom Gray 'Upload' Button styling */
+        input[type="file"]::file-selector-button {
+            /* Using 'content' to rename the button */
+            content: "Upload"; /* cite: 19 */
+            background-color: #e9ecef; /* Darker Gray (Gray'er) cite: 18 */
+            color: #495057;
+            border: 1px solid #adb5bd; /* Darker border for clarity */
+            border-radius: 4px;
+            padding: 6px 12px;
+            margin-right: 10px;
+            cursor: pointer;
+            font-weight: 500;
+            transition: all 0.2s ease-in-out;
+        }
+
+        input[type="file"]::file-selector-button:hover {
+            background-color: #dee2e6; /* Even darker gray on hover */
+            border-color: #6c757d;
+        }
     </style>
 </head>
-<body class="container" style="max-width: 600px;">
+<body>
 
-    <div class="card p-4 mb-4">
-        <h2 class="text-center mb-1">🏠 Smart Rental Recon</h2>
-        <p class="text-center text-muted mb-4">Logged in as: <strong>{{ username }}</strong></p>
-
-        <form id="reconForm" action="/reconcile" method="post" enctype="multipart/form-data">
-            <div class="mb-3">
-                <label class="form-label fw-bold">1. Upload GOGO PDF</label>
-                <input type="file" name="pdf1" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">2. Upload SURE Realty PDF</label>
-                <input type="file" name="pdf2" class="form-control" required>
-            </div>
-            
-            <div class="mb-3">
-                <label class="form-label fw-bold">3. Upload Baselane CSV</label>
-                <input type="file" name="sheet_json" class="form-control" required>
+<div class="container-fluid">
+    <div class="row">
+        <nav class="col-md-3 col-lg-2 sidebar d-none d-md-block shadow-sm">
+            <div class="mb-4 text-center">
+                <h4 class="fw-bold mb-0">🏠 Smart Rentals</h4>
+                <small class="text-muted">User: {{ username }}</small>
             </div>
 
-            <div class="mb-4">
-                <label class="form-label fw-bold">4. Select Reporting Month</label>
-                <input type="month" id="monthPicker" name="month_year" class="form-control" required>
+            <hr>
+
+            <ul class="nav flex-column mb-4">
+                <li class="nav-item"><a class="nav-link active" href="/"><i class="fa-solid fa-house"></i> Home</a></li>
+                <li class="nav-item"><a class="nav-link" href="/report"><i class="fa-solid fa-chart-line"></i> Dashboard</a></li>
+                <li class="nav-item"><a class="nav-link" href="/history"><i class="fa-solid fa-list-check"></i> Audit Log</a></li>
+                <li class="nav-item"><a class="nav-link" href="/parameters"><i class="fa-solid fa-gears"></i> Property Master</a></li>
+            </ul>
+
+            <div class="card p-3 bg-light border-0">
+                <p class="small fw-bold mb-2"><i class="fa-solid fa-cloud-arrow-up"></i> Quick Reconcile</p>
+                <form id="reconForm" action="/reconcile" method="post" enctype="multipart/form-data">
+                    <div class="mb-2">
+                        <label class="form-label">GOGO PDF</label>
+                        <input type="file" name="pdf1" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Sure Realty PDF</label>
+                        <input type="file" name="pdf2" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-2">
+                        <label class="form-label">Baselane CSV</label>
+                        <input type="file" name="sheet_json" class="form-control form-control-sm" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Reporting Month</label>
+                        <input type="month" id="monthPicker" name="month_year" class="form-control form-control-sm" required>
+                    </div>
+                    <button type="submit" id="submitBtn" class="btn btn-hf w-100 btn-sm py-2">
+                        <span id="btnText">🚀 Reconcile</span>
+                        <span id="btnSpinner" class="spinner-border spinner-border-sm d-none"></span>
+                    </button>
+                </form>
+            </div>
+        </nav>
+
+        <div class="main-content">
+            <div class="container-fluid">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h1 class="h2">Financial Summary: {{ selected_month }}</h1>
+                    <form action="/" method="get" class="d-flex gap-2">
+                        <input type="month" name="month_year" value="{{ selected_month }}" class="form-control">
+                        <button type="submit" class="btn btn-primary">Refresh</button>
+                    </form>
+                </div>
+
+                {% if request.query_params.get('msg') == 'success' %}
+                <div class="alert alert-success alert-dismissible fade show shadow-sm" role="alert">
+                    <strong><i class="fa-solid fa-circle-check"></i> Reconciliation Finished!</strong>
+                    Data has been pushed to the reports and audit logs.
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+                {% endif %}
+
+                <div class="row g-4 mb-4">
+                    <div class="col-md-4">
+                        <div class="card p-3 text-center h-100 shadow-sm">
+                            <h6 class="text-muted fw-bold">Rent Recon Status</h6>
+                            <div style="height: 150px; position: relative;">
+                                <canvas id="rentGauge"></canvas>
+                                <div style="position: absolute; top: 65%; left: 50%; transform: translate(-50%, 0);">
+                                    <h5 class="mb-0">{{ rent_percent }}%</h5>
+                                </div>
+                            </div>
+                            <div class="mt-2 small text-start px-3">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-circle-check text-success"></i> Collected:</span>
+                                    <strong>${{ "{:,.2f}".format(actual_rent) }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-circle-info text-secondary"></i> Expected:</span>
+                                    <strong>${{ "{:,.2f}".format(target_rent) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card p-3 text-center h-100 shadow-sm">
+                            <h6 class="text-muted fw-bold">HOA Fees</h6>
+                            <div style="height: 150px; position: relative;">
+                                <canvas id="hoaGauge"></canvas>
+                                <div style="position: absolute; top: 65%; left: 50%; transform: translate(-50%, 0);">
+                                    <h5 class="mb-0">{{ hoa_percent }}%</h5>
+                                </div>
+                            </div>
+                            <div class="mt-2 small text-start px-3">
+                                <div class="text-success mb-1"><i class="fa-solid fa-circle-check"></i> Verified: {{ hoa_verified }}/{{ total_props }}</div>
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid {{ 'fa-circle-check text-success' if hoa_percent >= 100 else 'fa-circle-xmark text-danger' }}"></i> Paid:</span>
+                                    <strong>${{ "{:,.2f}".format(actual_hoa) }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-circle-info text-secondary"></i> Expected:</span>
+                                    <strong>${{ "{:,.2f}".format(target_hoa) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="col-md-4">
+                        <div class="card p-3 text-center h-100 shadow-sm">
+                            <h6 class="text-muted fw-bold">Mortgage Audit</h6>
+                            <div style="height: 150px; position: relative;">
+                                <canvas id="mortgageGauge"></canvas>
+                                <div style="position: absolute; top: 65%; left: 50%; transform: translate(-50%, 0);">
+                                    <h5 class="mb-0">{{ mortgage_percent }}%</h5>
+                                </div>
+                            </div>
+                            <div class="mt-2 small text-start px-3">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-circle-check text-success"></i> Paid:</span>
+                                    <strong>${{ "{:,.2f}".format(actual_mort) }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-circle-info text-secondary"></i> Expected:</span>
+                                    <strong>${{ "{:,.2f}".format(target_mort) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>            
             </div>
 
-            <button type="submit" id="submitBtn" class="btn btn-hf w-100 py-2">
-                <span id="btnText">🚀 Start Reconciliation</span>
-                <span id="btnSpinner" class="spinner-border spinner-border-sm d-none" role="status"></span>
-            </button>
-        </form>
-    </div>
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-list-check me-2"></i> Rental Statement Reconciliation</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-hover align-middle mb-0" style="font-size: 0.9rem;">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Property Address</th>
+                                    <th>Management</th>
+                                    <th>Rent (Coll/Exp)</th>
+                                    <th>HOA (Paid/Exp)</th>
+                                    <th>Mortgage (Paid/Exp)</th>
+                                    <th>Status</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for log in recon_logs %}
+                                <tr>
+                                    <td class="fw-bold">{{ log.address }}</td>
+                                    <td class="text-muted">{{ log.property_management }}</td>
+                                    <td>
+                                        <span class="{{ 'text-success' if log.rent_variance == 0 else 'text-danger' }}">
+                                            ${{ "{:,.2f}".format(log.actual_rent) }} / ${{ "{:,.2f}".format(log.target_rent) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ 'text-success' if log.hoa_variance == 0 else 'text-danger' }}">
+                                            ${{ "{:,.2f}".format(log.actual_hoa) }} / ${{ "{:,.2f}".format(log.target_hoa) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="{{ 'text-success' if log.mortgage_variance == 0 else 'text-danger' }}">
+                                            ${{ "{:,.2f}".format(log.actual_mortgage) }} / ${{ "{:,.2f}".format(log.target_mortgage) }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <span class="badge {{ 'bg-success' if log.status == 'MATCHED' else 'bg-danger' }}">
+                                            {{ log.status }}
+                                        </span>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
 
-    <div class="row g-2 text-center mb-5">
-        <div class="col-6">
-            <a href="/report" class="btn btn-outline-dark w-100">📊 View Report</a>
+            <div class="card shadow-sm">
+                <div class="card-header bg-white py-3">
+                    <h5 class="mb-0 text-dark fw-bold"><i class="fa-solid fa-receipt me-2"></i> Miscellaneous Bank Activity</h5>
+                </div>
+                <div class="card-body p-0">
+                    <div class="table-responsive">
+                        <table class="table table-sm table-hover mb-0">
+                            <thead class="table-light">
+                                <tr>
+                                    <th class="ps-3">Date</th>
+                                    <th>Description</th>
+                                    <th>Merchant</th>
+                                    <th class="text-end pe-3">Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for item in misc_logs %}
+                                <tr>
+                                    <td class="ps-3">{{ item.date_cleared.strftime('%m/%d/%Y') }}</td>
+                                    <td class="text-truncate" style="max-width: 300px;">{{ item.description }}</td>
+                                    <td><span class="badge bg-secondary">{{ item.category_suggestion }}</span></td>
+                                    <td class="text-end pe-3 fw-bold {{ 'text-danger' if item.amount < 0 else 'text-success' }}">
+                                        ${{ "{:,.2f}".format(item.amount) }}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="col-6">
-            <a href="/history" class="btn btn-outline-secondary w-100">📜 Audit Log</a>
-        </div>
     </div>
+</div>
 
-    <script>
-        // 1. Handle Form Submission UI (Spinner)
-        document.getElementById('reconForm').onsubmit = function() {
-            const btn = document.getElementById('submitBtn');
-            const text = document.getElementById('btnText');
-            const spinner = document.getElementById('btnSpinner');
-            
-            btn.disabled = true;
-            text.innerText = " Processing PDFs...";
-            spinner.classList.remove('d-none');
-        };
+<script>
+    // Spinner logic
+    document.getElementById('reconForm').onsubmit = function() {
+        const btn = document.getElementById('submitBtn');
+        const text = document.getElementById('btnText');
+        const spinner = document.getElementById('btnSpinner');
+        btn.disabled = true;
+        text.innerText = " Processing...";
+        spinner.classList.remove('d-none');
+    };
 
-        // 2. Set Default Date
-        const now = new Date();
-        const year = now.getFullYear();
-        const month = String(now.getMonth() + 1).padStart(2, '0');
-        document.getElementById('monthPicker').value = `${year}-${month}`;
-    </script>
+    // Date default
+    const now = new Date();
+    document.getElementById('monthPicker').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+</script>
+
+<script>
+function createGauge(id, value, color) {
+    const ctx = document.getElementById(id).getContext('2d');
+    new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [value, 100 - value],
+                backgroundColor: [color, '#e9ecef'],
+                borderWidth: 0,
+                circumference: 180,
+                rotation: 270,
+                borderRadius: 5
+            }]
+        },
+        options: {
+            cutout: '80%',
+            aspectRatio: 2,
+            plugins: { legend: { display: false }, tooltip: { enabled: false } }
+        }
+    });
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    // 1. Rent Gauge: Green if 100%, Red if not
+    const rentVal = Number("{{ rent_percent|default(0) }}");
+    const rentColor = rentVal >= 100 ? '#22c55e' : '#ef4444';
+    createGauge('rentGauge', rentVal, rentColor);
+
+    // 2. HOA Gauge: Green if 100%, Red if not
+    const hoaVal = Number("{{ hoa_percent|default(0) }}");
+    const hoaColor = hoaVal >= 100 ? '#22c55e' : '#ef4444';
+    createGauge('hoaGauge', hoaVal, hoaColor);
+
+    // 3. Mortgage Gauge: Consistent Color Logic
+    const mortVal = Number("{{ mortgage_percent|default(0) }}");
+    // Change: Now turns Green at 100%, otherwise Red
+    const mortColor = mortVal >= 100 ? '#22c55e' : '#ef4444'; 
+    createGauge('mortgageGauge', mortVal, mortColor);
+});
+
+
+</script>
 
 </body>
 </html>
