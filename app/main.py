@@ -282,7 +282,7 @@ def export_baselane(
     
     #For Notes columns - Just to differentiate other txns in baselane
     notes_val = f"ManualUpload {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    current_date_str = datetime.now().strftime('%b %d %Y')
+    current_date_str = datetime.now().strftime('%B %d, %Y')
 
     # Generate CSV with virtual category splitting
     output = io.StringIO()
@@ -294,8 +294,8 @@ def export_baselane(
     for rec in records:
         # 1. Rent Row
         writer.writerow([
-            rec.statement_date.strftime('%b %d %Y'),
-            "Manually Added",
+            rec.statement_date.strftime('%B %d, %Y'),
+            "Manual Upload",
             f"Rent - {rec.property_management}",
             f"{rec.rent_paid:.2f}",
             "Rents",
@@ -307,8 +307,8 @@ def export_baselane(
         # 2. Management Fee Row (if exists)
         if rec.management_fees != 0:
             writer.writerow([
-                rec.statement_date.strftime('%b %d %Y'),
-                "Manually Added",
+                rec.statement_date.strftime('%B %d, %Y'),
+                "Manual Upload",
                 f"Fee - {rec.property_management}",
                 f"-{abs(rec.management_fees):.2f}",
                 "Management Fees",
