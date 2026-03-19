@@ -1,3 +1,4 @@
+import logging
 import pandas as pd
 from sqlalchemy.orm import Session
 from sqlalchemy import extract
@@ -7,6 +8,8 @@ import re
 from app.models import PropertyParameter, PropertyReconLog, MiscExpenseLog, RentalStatement
 from app.schemas import PropertyDetail
 from app.utils import extract_house_number, send_reconciliation_email
+
+logger = logging.getLogger(__name__)
 
 def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List[PropertyDetail], target_month: date):
     # --- 1. PRE-RECONCILIATION CLEANUP ---
@@ -19,7 +22,7 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
         db.commit()
     except Exception as e:
         db.rollback()
-        print(f"Cleanup failed: {e}")
+        logger.error(f"Cleanup failed: {e}")
     
     # Pre-calculate bank totals by Merchant (e.g., 'GOGO PROPERTY...', 'Sure Realty...')
     bank_totals = bank_df.groupby('Merchant')['Amount'].sum().to_dict()
@@ -42,6 +45,7 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
             ), None)
 
             actual_rent = match.rent_paid if match else 0.0
+            actual_mgmt_fee = match.management_fees if match else 0.0
             manager_name = prop.property_management
             
             # B. Bank Deductions (HOA & Mortgage) via Description Search
@@ -66,7 +70,9 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
             else:
                 v_hoa = float(actual_hoa - prop.hoa_fee)
 
-            status = "MATCHED" if (v_rent == 0 and v_hoa == 0 and v_mort == 0) else "DISCREPANCY"
+            v_mgmt = float(actual_mgmt_fee - prop.management_fee)
+
+            status = "MATCHED" if (v_rent == 0 and v_hoa == 0 and v_mort == 0 and v_mgmt == 0) else "DISCREPANCY"
             if actual_rent == 0 and actual_hoa == 0: status = "MISSING"
 
             log_entry = PropertyReconLog(
@@ -82,6 +88,9 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
                 target_mortgage=prop.mortgage_payment,
                 actual_mortgage=actual_mortgage,
                 mortgage_variance=v_mort,
+                target_mgmt_fee=prop.management_fee,
+                actual_mgmt_fee=actual_mgmt_fee,
+                mgmt_fee_variance=v_mgmt,
                 bank_deposit_total=bank_net_deposit,
                 status=status
             )
@@ -118,4 +127,4 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
 
     except Exception as e:
         db.rollback()
-        print(f"Reconciliation Failed: {e}")
+        logger.error(f"Reconciliation Failed: {e}")

@@ -1,21 +1,6 @@
 from sqlalchemy import Column, Integer, Date, String, Float, DateTime, JSON
 from app.database import Base
 from datetime import datetime
-from pydantic import BaseModel, Field
-from typing import List
-
-class PropertyDetail(BaseModel):
-    address: str = Field(default="Unknown Address")
-    rent_amount: float = Field(default=0.0)
-    rent_paid: float = Field(default=0.0)
-    management_fees: float = Field(default=0.0)
-    net_income: float = Field(default=0.0)
-    property_management: str = Field(default="Unknown")
-
-class ExtractedDoc(BaseModel):
-    statement_date: str
-    property_management: str
-    properties: List[PropertyDetail] = Field(default_factory=list)
 
 class RentalStatement(Base):
     __tablename__ = "rental_statements"
@@ -72,7 +57,12 @@ class PropertyReconLog(Base):
     target_mortgage = Column(Float, default=0.0)
     actual_mortgage = Column(Float, default=0.0)
     mortgage_variance = Column(Float, default=0.0)
-        
+
+    # Management Fee Fields
+    target_mgmt_fee = Column(Float, default=0.0)
+    actual_mgmt_fee = Column(Float, default=0.0)
+    mgmt_fee_variance = Column(Float, default=0.0)
+
     bank_deposit_total = Column(Float, default=0.0)
     # Metadata
     status = Column(String)  # "MATCHED", "DISCREPANCY", "MISSING"

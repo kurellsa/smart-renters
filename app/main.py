@@ -1,4 +1,4 @@
-from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends
+from fastapi import FastAPI, UploadFile, File, HTTPException, Request, Depends, Form
 import logging
 import json
 import smtplib
@@ -12,14 +12,13 @@ from collections import defaultdict
 import pandas as pd
 from datetime import datetime
 from sqlalchemy import extract, cast, Date, func
-from fastapi import FastAPI, Depends, Form, File, UploadFile
 
 # Absolute imports for your app structure
 from app.extract import pdf_to_text
 from app.llm import extract_with_llm
 from app.reconcile import run_reconciliation
-from app.schemas import ExtractedDoc
-from app.utils import generate_baselane_csv, get_relevant_text, sheet_to_json, parse_any_date
+from app.schemas import ExtractedDoc, RentalStatementOut
+from app.utils import get_relevant_text, sheet_to_json, parse_any_date
 from app.database import SessionLocal, engine, get_db # Added get_db here
 from app import models
 from fastapi.responses import StreamingResponse
@@ -65,13 +64,25 @@ async def reconcile_endpoint(
     try:
         month_year_obj = parse_any_date(month_year)
     except ValueError as e:
-        print(f"Date Error: {e}")
-    
+        logger.error(f"Date parse error: {e}")
+        raise HTTPException(status_code=400, detail=f"Invalid date format: {month_year}. Use YYYY-MM.")
+
+    if pdf1.content_type not in ("application/pdf",):
+        raise HTTPException(status_code=422, detail="pdf1 must be a PDF file.")
+    if pdf2.content_type not in ("application/pdf",):
+        raise HTTPException(status_code=422, detail="pdf2 must be a PDF file.")
+    if sheet_json.content_type not in ("text/csv", "application/vnd.ms-excel", "application/octet-stream"):
+        raise HTTPException(status_code=422, detail="sheet_json must be a CSV or Excel file.")
+
     # Read and extract
     content1 = await pdf1.read()
     content2 = await pdf2.read()
     bank_bytes = await sheet_json.read()
     bank_df = pd.read_csv(io.BytesIO(bank_bytes))
+    required_cols = {"Date", "Merchant", "Description", "Amount"}
+    missing = required_cols - set(bank_df.columns)
+    if missing:
+        raise HTTPException(status_code=422, detail=f"Bank CSV missing required columns: {missing}")
 
     text1 = pdf_to_text(content1)
     text2 = pdf_to_text(content2)
@@ -83,8 +94,9 @@ async def reconcile_endpoint(
     relevant_text2 = get_relevant_text(text2, [0])
   
     # Pass this clean, small string to the LLM
-    parsed1 = extract_with_llm(relevant_text1)
-    parsed2 = extract_with_llm(relevant_text2)
+    target_month = month_year_obj.strftime("%B")  # e.g., "January"
+    parsed1 = extract_with_llm(relevant_text1, target_month=target_month)
+    parsed2 = extract_with_llm(relevant_text2, target_month=target_month)
 
     if not parsed1.get("properties"):
         logger.error("PDF 1 failed to return property data")
@@ -200,9 +212,22 @@ async def unified_dashboard(
     gogo_total = sum((i.rent_paid - i.management_fees) for i in gogo_group)
     sure_total = sum((i.rent_paid - i.management_fees) for i in sure_group)
 
-    # Reconciliation Logic (Comparing to Bank)
-    gogo_match = "✅ MATCHED" if gogo_total == 6751.50 else "❌ DISCREPANCY"
-    sure_match = "✅ MATCHED" if sure_total == 1833.00 else "❌ DISCREPANCY"
+    # Reconciliation Logic (Comparing to DB-driven expected totals)
+    active_params = db.query(models.PropertyParameter).filter(
+        models.PropertyParameter.effective_to == None
+    ).all()
+    gogo_expected = sum(
+        (p.expected_rent - p.management_fee)
+        for p in active_params
+        if p.property_management and "GOGO" in p.property_management.upper()
+    )
+    sure_expected = sum(
+        (p.expected_rent - p.management_fee)
+        for p in active_params
+        if p.property_management and "SURE" in p.property_management.upper()
+    )
+    gogo_match = "MATCHED" if round(gogo_total, 2) == round(gogo_expected, 2) else "DISCREPANCY"
+    sure_match = "MATCHED" if round(sure_total, 2) == round(sure_expected, 2) else "DISCREPANCY"
 
     # 3. Final Table Filtering (if a specific property management is selected)
     if property_management:
@@ -282,7 +307,7 @@ def export_baselane(
     
     #For Notes columns - Just to differentiate other txns in baselane
     notes_val = f"ManualUpload {datetime.now().strftime('%Y-%m-%d %H:%M')}"
-    current_date_str = datetime.now().strftime('%B %d, %Y')
+    current_date_str = datetime.now().strftime('%Y-%m-%d')
 
     # Generate CSV with virtual category splitting
     output = io.StringIO()
@@ -292,9 +317,10 @@ def export_baselane(
     total_net_income = 0.0
 
     for rec in records:
+        formatted_date = rec.statement_date.strftime('%B %-d, %Y')  # e.g., "January 12, 2026"
         # 1. Rent Row
         writer.writerow([
-            rec.statement_date.strftime('%B %d, %Y'),
+            formatted_date,
             "Manual Upload",
             f"Rent - {rec.property_management}",
             f"{rec.rent_paid:.2f}",
@@ -307,7 +333,7 @@ def export_baselane(
         # 2. Management Fee Row (if exists)
         if rec.management_fees != 0:
             writer.writerow([
-                rec.statement_date.strftime('%B %d, %Y'),
+                formatted_date,
                 "Manual Upload",
                 f"Fee - {rec.property_management}",
                 f"-{abs(rec.management_fees):.2f}",
@@ -370,8 +396,7 @@ async def upload_parameters(file: UploadFile = File(...), db: Session = Depends(
         db.commit()
         return RedirectResponse(url="/parameters?msg=updated", status_code=303)
     except Exception as e:
-        # This will print the error in your VS Code / Terminal console
-        print(f"ERROR BULK LOADING: {e}")
+        logger.error(f"Error bulk loading parameters: {e}")
         raise HTTPException(status_code=500, detail=str(e))
  
 ## ------- Report to view Property Parameters --------------------
@@ -393,8 +418,7 @@ async def view_parameters(request: Request, db: Session = Depends(get_db)):
             "property_count": property_count
         })
     except Exception as e:
-        # This will print the error in your VS Code / Terminal console
-        print(f"ERROR LOADING PROPERTY MASTER: {e}")
+        logger.error(f"Error loading property master: {e}")
         raise HTTPException(status_code=500, detail=str(e))
     
 ## ------- Report by property_management and Month/Year. ---------------
@@ -417,11 +441,10 @@ def view_detailed_report(
         )
 
     statements = query.order_by(models.RentalStatement.statement_date.desc()).all()
-    
-    # This returns the data to your frontend
+
     return {
         "count": len(statements),
-        "data": statements
+        "data": [RentalStatementOut.model_validate(s) for s in statements]
     }
 
 attach_huggingface_oauth(app)

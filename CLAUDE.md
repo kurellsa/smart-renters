@@ -33,8 +33,6 @@ PDF statements, compares against bank transactions, generates reports + Baselane
 
 ## Known Issues — Leave Alone Unless Explicitly Asked
 - `app/llm copy.py` — old backup file, ignore completely
-- Duplicate imports in main.py — pre-existing, do not "fix"
-- schemas.py and models.py both define PropertyDetail — known duplication, do not merge
 
 ## Conventions
 - DB sessions: ALWAYS use `get_db` dependency, NEVER call `SessionLocal()` directly
