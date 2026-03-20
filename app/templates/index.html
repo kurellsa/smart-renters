@@ -223,6 +223,7 @@
                                     <th>HOA (Paid/Exp)</th>
                                     <th>Mortgage (Paid/Exp)</th>
                                     <th>Status</th>
+                                    <th style="min-width: 200px;">Comment</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -250,6 +251,18 @@
                                             {{ log.status }}
                                         </span>
                                     </td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-1">
+                                            <input type="text" class="form-control form-control-sm recon-comment"
+                                                   data-id="{{ log.id }}"
+                                                   value="{{ log.user_comment or '' }}"
+                                                   placeholder="Add comment..."
+                                                   style="font-size: 0.8rem;">
+                                            <button class="btn btn-sm btn-outline-secondary save-recon-btn d-none" data-id="{{ log.id }}" title="Save">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                        </div>
+                                    </td>
                                 </tr>
                                 {% endfor %}
                             </tbody>
@@ -270,7 +283,8 @@
                                     <th class="ps-3">Date</th>
                                     <th>Description</th>
                                     <th>Merchant</th>
-                                    <th class="text-end pe-3">Amount</th>
+                                    <th class="text-end">Amount</th>
+                                    <th class="ps-3" style="min-width: 200px;">Comment</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -279,8 +293,20 @@
                                     <td class="ps-3">{{ item.date_cleared.strftime('%m/%d/%Y') }}</td>
                                     <td class="text-truncate" style="max-width: 300px;">{{ item.description }}</td>
                                     <td><span class="badge bg-secondary">{{ item.category_suggestion }}</span></td>
-                                    <td class="text-end pe-3 fw-bold {{ 'text-danger' if item.amount < 0 else 'text-success' }}">
+                                    <td class="text-end fw-bold {{ 'text-danger' if item.amount < 0 else 'text-success' }}">
                                         ${{ "{:,.2f}".format(item.amount) }}
+                                    </td>
+                                    <td class="ps-3">
+                                        <div class="d-flex align-items-center gap-1">
+                                            <input type="text" class="form-control form-control-sm misc-comment"
+                                                   data-id="{{ item.id }}"
+                                                   value="{{ item.user_comment or '' }}"
+                                                   placeholder="Add comment..."
+                                                   style="font-size: 0.8rem;">
+                                            <button class="btn btn-sm btn-outline-secondary save-comment-btn d-none" data-id="{{ item.id }}" title="Save">
+                                                <i class="fa-solid fa-check"></i>
+                                            </button>
+                                        </div>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -307,6 +333,46 @@
     // Date default
     const now = new Date();
     document.getElementById('monthPicker').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+
+    // Generic inline comment handler
+    function initCommentEditing(inputSelector, btnSelector, apiPrefix) {
+        document.querySelectorAll(inputSelector).forEach(input => {
+            const origVal = input.value;
+            const btn = document.querySelector(`${btnSelector}[data-id="${input.dataset.id}"]`);
+
+            input.addEventListener('input', () => {
+                btn.classList.toggle('d-none', input.value === origVal);
+            });
+
+            input.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') saveComment(apiPrefix, input.dataset.id, input, btn);
+            });
+
+            btn.addEventListener('click', () => saveComment(apiPrefix, input.dataset.id, input, btn));
+        });
+    }
+
+    async function saveComment(apiPrefix, id, input, btn) {
+        btn.disabled = true;
+        try {
+            const res = await fetch(`/${apiPrefix}/${id}/comment`, {
+                method: 'PUT',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({comment: input.value})
+            });
+            if (res.ok) {
+                btn.classList.add('d-none');
+                input.classList.add('border-success');
+                setTimeout(() => input.classList.remove('border-success'), 1500);
+            }
+        } finally {
+            btn.disabled = false;
+        }
+    }
+
+    // Init both comment sections
+    initCommentEditing('.recon-comment', '.save-recon-btn', 'recon');
+    initCommentEditing('.misc-comment', '.save-comment-btn', 'misc');
 </script>
 
 <script>

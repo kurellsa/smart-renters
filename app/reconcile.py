@@ -13,6 +13,26 @@ logger = logging.getLogger(__name__)
 
 def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List[PropertyDetail], target_month: date):
     # --- 1. PRE-RECONCILIATION CLEANUP ---
+    # Preserve user comments from existing recon logs before deleting
+    existing_recon = db.query(PropertyReconLog).filter(
+        extract('month', PropertyReconLog.month_year) == target_month.month,
+        extract('year', PropertyReconLog.month_year) == target_month.year
+    ).all()
+    saved_recon_comments = {
+        r.address: r.user_comment
+        for r in existing_recon if r.user_comment
+    }
+
+    # Preserve user comments from existing misc logs before deleting
+    existing_misc = db.query(MiscExpenseLog).filter(
+        extract('month', MiscExpenseLog.month_year) == target_month.month,
+        extract('year', MiscExpenseLog.month_year) == target_month.year
+    ).all()
+    saved_comments = {
+        (m.description, m.amount): m.user_comment
+        for m in existing_misc if m.user_comment
+    }
+
     try:
         for model in [PropertyReconLog, MiscExpenseLog]:
             db.query(model).filter(
@@ -92,7 +112,8 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
                 actual_mgmt_fee=actual_mgmt_fee,
                 mgmt_fee_variance=v_mgmt,
                 bank_deposit_total=bank_net_deposit,
-                status=status
+                status=status,
+                user_comment=saved_recon_comments.get(prop.address)
             )
 
             # Add to list AND the DB session
@@ -103,19 +124,24 @@ def run_reconciliation(db: Session, bank_df: pd.DataFrame, extracted_props: List
         misc_logs = []
 
         pattern = '|'.join(all_house_nums)
+        # Exclude rows that are: (1) HOA/Mortgage for a known property, OR (2) management company deposits
+        has_house_num = bank_df['Description'].str.contains(pattern, case=False, na=False)
+        is_hoa_or_mortgage = bank_df['Merchant'].str.contains('HOA|Mortgage', case=False, na=False)
+        is_mgmt_company = bank_df['Merchant'].str.contains('GOGO PROPERTY|Sure Realty', case=False, na=False)
         misc_df = bank_df[
-            (~bank_df['Description'].str.contains(pattern, case=False, na=False)) & 
-            (~bank_df['Merchant'].str.contains('HOA|Mortgage', case=False, na=False)) &
-            (~bank_df['Merchant'].str.contains('GOGO PROPERTY|Sure Realty', case=False, na=False))
+            ~(has_house_num & is_hoa_or_mortgage) &
+            ~is_mgmt_company
         ]
 
         for _, row in misc_df.iterrows():
+            comment_key = (row['Description'], row['Amount'])
             misc_entry = MiscExpenseLog(
                 month_year=target_month,
                 date_cleared=row['Date'],
                 description=row['Description'],
                 amount=row['Amount'],
-                category_suggestion=row.get('Merchant', 'Misc')
+                category_suggestion=row.get('Merchant', 'Misc'),
+                user_comment=saved_comments.get(comment_key)
             )
             db.add(misc_entry)
             misc_logs.append(misc_entry)

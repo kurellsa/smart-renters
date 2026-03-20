@@ -66,6 +66,7 @@ class PropertyReconLog(Base):
     bank_deposit_total = Column(Float, default=0.0)
     # Metadata
     status = Column(String)  # "MATCHED", "DISCREPANCY", "MISSING"
+    user_comment = Column(String, nullable=True) # User-added commentary
     created_at = Column(DateTime, default=datetime.utcnow)
 
 class MiscExpenseLog(Base):
@@ -78,3 +79,4 @@ class MiscExpenseLog(Base):
     amount = Column(Float)
     category_suggestion = Column(String) # e.g., "Repairs", "Bank Fee"
     property_id = Column(Integer, nullable=True) # Linked if possible
+    user_comment = Column(String, nullable=True) # User-added commentary

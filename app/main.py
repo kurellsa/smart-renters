@@ -447,6 +447,44 @@ def view_detailed_report(
         "data": [RentalStatementOut.model_validate(s) for s in statements]
     }
 
+## ------- Update Recon Log Comment ---------------
+@app.put("/recon/{recon_id}/comment")
+async def update_recon_comment(
+    recon_id: int,
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    body = await request.json()
+    comment = body.get("comment", "").strip()
+
+    recon = db.query(models.PropertyReconLog).filter(models.PropertyReconLog.id == recon_id).first()
+    if not recon:
+        raise HTTPException(status_code=404, detail="Recon log not found")
+
+    recon.user_comment = comment if comment else None
+    db.commit()
+    return {"status": "ok", "id": recon_id, "comment": recon.user_comment}
+
+## ------- Update Misc Expense Comment ---------------
+@app.put("/misc/{misc_id}/comment")
+async def update_misc_comment(
+    misc_id: int,
+    request: Request,
+    user=Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    body = await request.json()
+    comment = body.get("comment", "").strip()
+
+    misc = db.query(models.MiscExpenseLog).filter(models.MiscExpenseLog.id == misc_id).first()
+    if not misc:
+        raise HTTPException(status_code=404, detail="Misc expense not found")
+
+    misc.user_comment = comment if comment else None
+    db.commit()
+    return {"status": "ok", "id": misc_id, "comment": misc.user_comment}
+
 attach_huggingface_oauth(app)
 # ------------- Home Page ------------------
 @app.get("/", response_class=HTMLResponse)
