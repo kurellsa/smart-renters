@@ -449,9 +449,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // 4. P/L Gauge: Shows profit margin as percentage of income
     const totalPL = Number("{{ total_pl|default(0) }}");
     const totalIncome = Number("{{ actual_rent|default(0) }}");
-    const plPercent = totalIncome > 0 ? Math.min(Math.round((totalPL / totalIncome) * 100), 100) : 0;
+    const plRatio = totalIncome > 0 ? Math.min(Math.round(Math.abs(totalPL) / totalIncome * 100), 100) : 0;
     const plColor = totalPL >= 0 ? '#22c55e' : '#ef4444';
-    createGauge('plGauge', Math.max(plPercent, 0), plColor);
+    createGauge('plGauge', plRatio, plColor);
 });
 
 
