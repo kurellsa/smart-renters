@@ -222,6 +222,7 @@
                                     <th>Rent (Coll/Exp)</th>
                                     <th>HOA (Paid/Exp)</th>
                                     <th>Mortgage (Paid/Exp)</th>
+                                    <th>P/L</th>
                                     <th>Status</th>
                                     <th style="min-width: 200px;">Comment</th>
                                 </tr>
@@ -244,6 +245,12 @@
                                     <td>
                                         <span class="{{ 'text-success' if log.mortgage_variance == 0 else 'text-danger' }}">
                                             ${{ "{:,.2f}".format(log.actual_mortgage) }} / ${{ "{:,.2f}".format(log.target_mortgage) }}
+                                        </span>
+                                    </td>
+                                    {% set pl = log.actual_rent - log.actual_hoa - log.actual_mortgage %}
+                                    <td>
+                                        <span class="{{ 'text-success' if pl >= 0 else 'text-danger' }} fw-bold">
+                                            ${{ "{:,.2f}".format(pl) }}
                                         </span>
                                     </td>
                                     <td>
