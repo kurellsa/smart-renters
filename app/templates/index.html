@@ -247,7 +247,7 @@
                                             ${{ "{:,.2f}".format(log.actual_mortgage) }} / ${{ "{:,.2f}".format(log.target_mortgage) }}
                                         </span>
                                     </td>
-                                    {% set pl = log.actual_rent - log.actual_hoa - log.actual_mortgage %}
+                                    {% set pl = log.actual_rent - log.actual_hoa - log.actual_mortgage - log.actual_mgmt_fee %}
                                     <td>
                                         <span class="{{ 'text-success' if pl >= 0 else 'text-danger' }} fw-bold">
                                             ${{ "{:,.2f}".format(pl) }}
