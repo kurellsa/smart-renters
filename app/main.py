@@ -539,6 +539,12 @@ async def upload_page(
     mort_verified = sum(1 for log in recon_logs if log.mortgage_variance == 0) if recon_logs else 0
     mortgage_percent = (mort_verified / total_props * 100) if total_props > 0 else 0
 
+    # --- P/L ---
+    total_pl = sum(
+        log.actual_rent - log.actual_hoa - log.actual_mortgage - log.actual_mgmt_fee
+        for log in recon_logs
+    ) if recon_logs else 0.0
+
     # 4. Return Data to index.html
     return html_templates.TemplateResponse("index.html", {
         "request": request,
@@ -556,5 +562,6 @@ async def upload_page(
         "total_props": total_props,
         "mortgage_percent": int(mortgage_percent),
         "actual_mort": actual_mort,
-        "target_mort": target_mort
+        "target_mort": target_mort,
+        "total_pl": total_pl
     })

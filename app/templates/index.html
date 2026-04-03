@@ -139,7 +139,7 @@
 
                 <!-- <div class="row g-4 mb-4"> -->
                 <div class="row g-3 mb-4">
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <div class="card p-3 text-center h-100 shadow-sm">
                             <h6 class="text-muted fw-bold">Rent Recon Status</h6>
                             <div style="height: 150px; position: relative;">
@@ -161,7 +161,7 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <div class="card p-3 text-center h-100 shadow-sm">
                             <h6 class="text-muted fw-bold">HOA Fees</h6>
                             <div style="height: 150px; position: relative;">
@@ -184,7 +184,7 @@
                         </div>
                     </div>
 
-                    <div class="col-12 col-md-4">
+                    <div class="col-12 col-md-3">
                         <div class="card p-3 text-center h-100 shadow-sm">
                             <h6 class="text-muted fw-bold">Mortgage Audit</h6>
                             <div style="height: 150px; position: relative;">
@@ -205,7 +205,31 @@
                             </div>
                         </div>
                     </div>
-                </div>            
+
+                    <div class="col-12 col-md-3">
+                        <div class="card p-3 text-center h-100 shadow-sm">
+                            <h6 class="text-muted fw-bold">Monthly P/L</h6>
+                            <div style="height: 150px; position: relative;">
+                                <canvas id="plGauge"></canvas>
+                                <div style="position: absolute; top: 55%; left: 50%; transform: translate(-50%, 0);">
+                                    <h5 class="mb-0 {{ 'text-success' if total_pl >= 0 else 'text-danger' }}">
+                                        ${{ "{:,.2f}".format(total_pl) }}
+                                    </h5>
+                                </div>
+                            </div>
+                            <div class="mt-2 small text-start px-3">
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-arrow-up text-success"></i> Income:</span>
+                                    <strong>${{ "{:,.2f}".format(actual_rent) }}</strong>
+                                </div>
+                                <div class="d-flex justify-content-between">
+                                    <span><i class="fa-solid fa-arrow-down text-danger"></i> Expenses:</span>
+                                    <strong>${{ "{:,.2f}".format(actual_rent - total_pl) }}</strong>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div class="card shadow-sm mb-4">
@@ -419,8 +443,15 @@ document.addEventListener("DOMContentLoaded", () => {
     // 3. Mortgage Gauge: Consistent Color Logic
     const mortVal = Number("{{ mortgage_percent|default(0) }}");
     // Change: Now turns Green at 100%, otherwise Red
-    const mortColor = mortVal >= 100 ? '#22c55e' : '#ef4444'; 
+    const mortColor = mortVal >= 100 ? '#22c55e' : '#ef4444';
     createGauge('mortgageGauge', mortVal, mortColor);
+
+    // 4. P/L Gauge: Shows profit margin as percentage of income
+    const totalPL = Number("{{ total_pl|default(0) }}");
+    const totalIncome = Number("{{ actual_rent|default(0) }}");
+    const plPercent = totalIncome > 0 ? Math.min(Math.round((totalPL / totalIncome) * 100), 100) : 0;
+    const plColor = totalPL >= 0 ? '#22c55e' : '#ef4444';
+    createGauge('plGauge', Math.max(plPercent, 0), plColor);
 });
 
 
