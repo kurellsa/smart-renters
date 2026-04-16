@@ -13,10 +13,10 @@ PyMuPDF
 pypdf
 python-dotenv
 python-multipart
-starlette
+starlette==0.50.0
 typing-inspection
 typing_extensions
-fastapi
+fastapi==0.128.0
 uvicorn
 python-multipart
 pydantic

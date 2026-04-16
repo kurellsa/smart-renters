@@ -235,8 +235,7 @@ async def unified_dashboard(
     
     statements = query.order_by(models.RentalStatement.statement_date.desc()).all()
 
-    return html_templates.TemplateResponse("dashboard.html", {
-        "request": request,
+    return html_templates.TemplateResponse(request, "dashboard.html", {
         "statements": statements,
         "gogo_total": gogo_total,
         "gogo_match": gogo_match,
@@ -244,7 +243,7 @@ async def unified_dashboard(
         "sure_match": sure_match,
         "selected_month": month_year,
         "selected_property_management": property_management,
-        "username": "smartrenters" 
+        "username": "smartrenters"
     })
 # ---------------- Audit Log --------------------
 @app.get("/history")
@@ -275,8 +274,7 @@ async def audit_log(
 
     statements = query.order_by(models.RentalStatement.statement_date.desc()).all()
 
-    return html_templates.TemplateResponse("history.html", {
-        "request": request,
+    return html_templates.TemplateResponse(request, "history.html", {
         "statements": statements,
         "selected_month": month_year,
         "selected_property_management": property_management,
@@ -411,8 +409,7 @@ async def view_parameters(request: Request, db: Session = Depends(get_db)):
         # 2. Safety check for count
         property_count = len(parameters) if parameters else 0
 
-        return html_templates.TemplateResponse("parameters.html", {
-            "request": request,
+        return html_templates.TemplateResponse(request, "parameters.html", {
             "username": "smartrenters", # Ensure this matches your index.html
             "parameters": parameters,
             "property_count": property_count
@@ -495,7 +492,7 @@ async def upload_page(
 ):
     user = parse_huggingface_oauth(request)
     if not user:
-        return html_templates.TemplateResponse("login.html", {"request": request})
+        return html_templates.TemplateResponse(request, "login.html")
 
     # 1. Smart Date Logic: Default to the most recent data available
     if not month_year:
@@ -546,8 +543,7 @@ async def upload_page(
     ) if recon_logs else 0.0
 
     # 4. Return Data to index.html
-    return html_templates.TemplateResponse("index.html", {
-        "request": request,
+    return html_templates.TemplateResponse(request, "index.html", {
         "username": user.user_info.preferred_username,
         "selected_month": month_year,
         "recon_logs": recon_logs,
